@@ -1,0 +1,80 @@
+|===
+|Den|Eb|RnW|R1|R0|B1|B0|A15|MA16|MA15|RAMb|ROMb
+|1  |x |x  |x |x |x |x |x  |1   |0   |0   |1 
+|0  |x |x  |x |x |0 |0 |1  |0   |1   |0   |1   
+|0  |x |x  |x |x |0 |1 |1  |1   |0   |0   |1     
+|0  |x |x  |x |x |1 |0 |1  |1   |1   |0   |1     
+
+|0  |x  |0 |x |x |x |x |1  |x   |x   |0   |1     
+
+|0  |1  |1 |0 |0 |x |x |1  |0   |0   |1   |0
+|0  |1  |1 |0 |1 |x |x |1  |0   |1   |1   |0    
+|0  |1  |1 |1 |0 |x |x |1  |1   |0   |1   |0     
+|0  |1  |1 |1 |1 |x |x |1  |1   |1   |1   |0     
+
+|===
+
+== System Architecture
+=== Memory Architecture
+==== Memory Map
+All devices implement the following memory layout:
+
+* Fixed RAM from 0x0000 to 0x7FFF
+* Three memory architecture types:
+** Linear 31.5K EPROM from 0x8000 to 0xFDFF
+** Banked 128K Flash EEPROM and 128K RAM in same 31.5K space
+** Segmented 512K RAM, 128K Flash EEPROM, with same linear architecture in segment 0
+
+==== Bank Switching
+.Standard Bank Switching Arrangement
+[%header, cols="1,1,1,1,1,1,1,1,1,1,1,1"]
+|===
+|Den|ENb|RnW|R1|R0|B1|B0|A15|MA16|MA15|RAMb|ROMb
+|1  |x  |x  |x |x |x |x |x  |1   |0   |0   |1 
+|0  |x  |x  |x |x |0 |0 |1  |0   |1   |0   |1   
+|0  |x  |x  |x |x |0 |1 |1  |1   |0   |0   |1     
+|0  |x  |x  |x |x |1 |0 |1  |1   |1   |0   |1     
+|0  |x  |0 |x |x |x |x |1  |x   |x   |0   |1     
+|0  |1  |1 |0 |0 |x |x |1  |0   |0   |1   |0
+|0  |1  |1 |0 |1 |x |x |1  |0   |1   |1   |0    
+|0  |1  |1 |1 |0 |x |x |1  |1   |0   |1   |0     
+|0  |1  |1 |1 |1 |x |x |1  |1   |1   |1   |0     
+|===
+
+[NOTE]
+--
+Table Legend
+
+Den: Display Enable +
+ENb: Enable (inverted) +
+RnW: Read/Write +
+R1/R0: ROM bank bits 1 and 0 +
+B1/B0: Ram bank bits 1 and 0 +
+A15: Address line 15 +
+MA16/MA15: Memory Address lines 16 and 15 +
+RAMb: RAM select inverted +
+ROMb: ROM select inverted +
+--
+
+==== Memory Types and Configurations
+
+=== Bus Architecture
+==== Single Linear Bus (R65C02)
+==== Shared Banked Bus (W65C02)
+==== Shared Segmented Bus (W65816)
+==== Dual CPU 8-bit Bus (R65C02 + V25)
+==== Dual CPU 16/8-bit Bus Configurations
+
+=== Interface Systems
+==== W65C22 VIA Implementation
+The system uses a single W65C22 Versatile Interface Adapter supporting:
+
+* Bit-banged I2C
+* Bit-banged SPI
+* Shift register based Aves Serial Bus (ASB)
+
+==== I2C Interface
+==== SPI Interface
+==== Aves Serial Bus (ASB)
+
+[remaining sections as previously outlined...]
