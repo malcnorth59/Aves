@@ -1,8 +1,8 @@
-= Aves Hardware Reference Manual
+= Aves: Hardware:Reference Manual
 Malcolm North, February 2025
 :doctype: book
 // :title-page-background-image: image:logo.png[]
-:title-logo-image: image:kingfisher.jpg[top=0.5in,align=center,pdfwidth=7in]
+:title-logo-image: image:aves.png[top=0.5in,align=center,pdfwidth=4.5in]
 :pdf-page-size: a4
 :toc:
 :sectnums:
@@ -11,6 +11,8 @@ Malcolm North, February 2025
 :chapter-signifier: Chapter
 :part-signifier: Part
 :media: prepress== Introduction
+
+= Architectural Principals
 
 == Introduction
 The Aves hardware platform represents a flexible and extensible 8/16-bit computer architecture designed to bridge classic computing with modern interfaces and capabilities. Named after the taxonomic class of birds, Aves embodies both elegance and adaptability in its design.
@@ -37,20 +39,34 @@ Throughout the system, one finds this pattern of respectful modernisation. The h
 This architectural philosophy extends to the physical design as well. The circuit board layouts, component selection, and signal routing all reflect a balance between simplicity and capability. Modern manufacturing techniques and components are employed where beneficial, yet the system remains accessible to hobbyist construction and modification, maintaining the spirit of its predecessors.
 
 === Processor Options
+Aves offers a choice of 8 and 16 bit CPUs within a common architecture. Use of a CPU for I/O operations maximises the re-use of Kernal code and simplifies the task of supporting multiple architectures. All CPUs are CMOS variants consume less power and run at speed of at least 4MHz.
 
-This section would cover:
-1. Supported CPU types and their characteristics
-   - R65C02 (speed grades, features)
-   - W65C02 (differences from R65C02)
-   - W65816 (16-bit capabilities)
-   - V25 (when used as co-processor)
+.Supported CPU Types
+[%header, cols="2,3"]
+|===
+|CPU|Description
 
-2. Clock frequencies and timing
-   - Standard operating frequencies
-   - Bus timing relationships
-   - System clock generation and distribution
-   - Wait state requirements
+|R65C02
+|The Rockwell R65C02 is no longer in production, but is widely available as new old stock. It is used in several Aves models and  is always clocked at 4MHz. The R65C02 is pin compatible with the original MOS 6502, which was fabricated in NMOS. One of many advantages the 65C02 has over its NMOS sibling is an enhanced instruction set
 
+|WDC65C02
+|The Western Design Center WDC65C02 is currently in production. WDC were the creators of the CPU core used in the R65C02, and the WDC65C02 is later version of this core. The same instruction set is used but the CPU it can be run at 14MHz, is fully static and can has tri-state address and data bus lines. A new WAI instruction stops the CPU clock and reduces power to a minimum, it will restart when an interrupt occurs
+
+|WDC65816
+|The Western design center WDC65816 is a 16 bit variant of the WDC65C02 with an 8 bit emulation mode as well as 24 bit segmented address bus. The WDC65C816 has a maximum clock speed of 14MHz
+
+|NEC V25 and V35
+|The NEC (now Renesas) V25 and V35 are CMOS variants of the Intel 8088 and 8086 respectively, with integrated UARTs, Timers, GPIO and DMA. The V25 has an 8 bit data bus and the V35 has a 16 biot bus both have a 20 bit address bus. which uses the same segmented strategy used by Intel
+
+|MC68HC000
+|The Motorola MC68HC000 highly successful and well regarded CPU, was used to power the Commodore Amiga and Atari ST computers. Its architecture and performance were a breakthrough, and this CPU is adopted to pay homage to such an innovation. 
+
+The MC68HC000 had a 32 bit addressing capability with 24 bit address bus width. It has a maximum clock speed of 10MHz, and has a dual mode CPU bus timing that supports older 6800 and 6500 8 bit peripherals, as well as an updated asynchronous native bus. 
+
+|Z16C00
+|The Z16C01 is a CMOS version of the Zilog Z8001 CPU, and is included as a curiosity and acknowledgment of the Commodore C900 Zilog Z8001 based "UNIX machine" prototype. The Z8001 was another 16 bit CPU that was developed at around the same time as the Intel 8086 and Motorola 68000. The Z8001 used a 24 bit segmented architecture, although only 23 bits where available on the address bus. The Z16C01 has a maximum clock frequency of 10MHz 
+
+|===
 3. CPU configuration options
    - Single processor modes
    - Dual processor arrangements
@@ -58,9 +74,6 @@ This section would cover:
    - Clock selection and distribution
 
 4. Processor-specific features
-   - R65C02/W65C02 specific capabilities
-   - W65816 native vs emulation modes
-   - V25 specific features when used
    - Interrupt handling differences
 
 === Memory Architecture
@@ -186,4 +199,8 @@ Current versions of these datasheets may be obtained from:
 The specific versions used in developing Aves are preserved in the project repository under `/doc/datasheets/` to ensure reproducible builds and consistent reference.
 --
 
+= Aves 8 Bit Models
 
+= Aves Peripherals
+
+= Aves 16 Bit Models
