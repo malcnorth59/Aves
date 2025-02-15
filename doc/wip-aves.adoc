@@ -1,20 +1,12 @@
-== response
-Yes, I see the Memory Architecture section has been updated with the narrative introduction and includes the detailed Memory Control Register table. Would you like me to help expand the bank switching section further by:
+== Architectural Principles
+Before delving into specific technical details, it's important to understand the fundamental design philosophies and architectural decisions that shape the Aves platform. These principles reflect both practical engineering considerations and broader goals for the system's role in modern retrocomputing.
 
-. Adding a narrative description of how the bank switching mechanism operates in practice
+The architecture of Aves represents a careful balance between preserving the elegant simplicity of classic 8-bit systems and incorporating modern design practices. Rather than simply replicating vintage hardware, each aspect of the system has been thoughtfully evaluated and, where appropriate, enhanced to meet contemporary needs while maintaining the spirit of its inspiration.
 
-. Explaining the relationships between the signals shown in the Standard Bank Switching Arrangement table
+At the heart of Aves lies Considered Minimalism, where each component serves multiple purposes through clever design rather than brute-force complexity. This approach yields efficient use of resources while maintaining clarity and serviceability. 
 
-. Describing common use cases for the different window sizes (1K, 2K, 4K)
+The platform embraces Pragmatic Modernization, incorporating contemporary interfaces and manufacturing techniques in ways that preserve the system's accessibility and educational value. This careful integration of modern elements enhances rather than obscures the fundamental simplicity of the design.
 
-. Elaborating on the ROM write-through functionality and its applications
+Flexible Evolution stands as another cornerstone of the architecture. The system accommodates various processor and memory configurations while maintaining a consistent programming model, allowing it to grow with user needs without compromising its core principles.
 
-Or would you prefer to focus on a different aspect of the memory architecture? I notice we could also expand on:
-
-. The memory types and configurations section which is currently just a placeholder
-
-. The practical implications of the different banking modes
-
-. The interaction between the banking system and interrupts
-
-. How the window bits (W1b, W2b) can be used effectively in software
+The following sections detail how these principles manifest in specific aspects of the system architecture, from processor selection to memory management and I/O subsystems.

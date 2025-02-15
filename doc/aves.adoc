@@ -12,16 +12,38 @@ Malcolm North, February 2025
 :part-signifier: Part
 :media: prepress== Introduction
 
-= Architectural Principals
-
-== Introduction
+== Abstract
 The Aves hardware platform represents a flexible and extensible 8/16-bit computer architecture designed to bridge classic computing with modern interfaces and capabilities. Named after the taxonomic class of birds, Aves embodies both elegance and adaptability in its design.
 
-This system supports multiple processor configurations, from the classic R65C02 to the more advanced W65816, with options for dual-processor arrangements incorporating the V25. The architecture accommodates various memory configurations, from simple linear addressing to sophisticated bank-switched and segmented memory layouts, providing up to 2MB of addressable space.
+This system supports multiple processor configurations, from the classic R65C02 to the more advanced WDC65816, with options for dual-processor arrangements incorporating the V25, V35, Z8K and MC68K. The architecture accommodates various memory configurations, from simple linear addressing to sophisticated bank-switched and segmented memory layouts, providing up to 2MB of addressable space.
 
 At its core, Aves combines the simplicity and reliability of 8-bit systems with some of the expandability of contemporary systems. The platform features a versatile I/O subsystem built around the W65C22 VIA, supporting multiple communication protocols including I2C, SPI, and the custom Aves Serial Bus (ASB).
 
 This hardware reference manual provides comprehensive documentation of the Aves system architecture, memory configurations, bus arrangements, and interface specifications. It serves as the authoritative reference for hardware developers, system programmers, and enthusiasts working with the Aves platform.
+
+== Foreword
+The Aves hardware platform represents a thoughtful convergence of classic computing heritage and modern design principles. This project emerged from a deep appreciation for the elegant architectures of early microcomputers, particularly those from Commodore, while embracing contemporary interface standards and manufacturing techniques.
+
+In developing Aves, the preservation of the accessibility and educational value that made 8-bit systems so remarkable, was the highest priority. The result is not merely a recreation of vintage hardware, but rather a carefully considered evolution that maintains the spirit of its predecessors while offering new possibilities.
+
+This reference manual documents the technical implementation of these goals. Whether you're a hardware developer integrating Aves into a larger system, a programmer writing software for the platform, or an enthusiast exploring computer architecture, you'll find detailed information about the system's capabilities and design principles.
+
+The manual is structured to serve both as a comprehensive reference and as an educational resource. While some sections delve into complex technical details, there is a focus on clarity and practical application throughout. The included examples and explanations aim to make the material accessible without sacrificing technical accuracy.
+
+We hope this documentation helps you understand and utilise the full potential of the Aves platform, whether you're building, programming, or simply exploring this bridge between classic and contemporary computing.
+
+== Architectural Principles
+Before delving into specific technical details, it's important to understand the fundamental design philosophies and architectural decisions that shape the Aves platform. These principles reflect both practical engineering considerations and broader goals for the system's role in modern retrocomputing.
+
+The architecture of Aves represents a careful balance between preserving the elegant simplicity of classic 8-bit systems and incorporating modern design practices. Rather than simply replicating vintage hardware, each aspect of the system has been thoughtfully evaluated and, where appropriate, enhanced to meet contemporary needs while maintaining the spirit of its inspiration.
+
+At the heart of Aves lies Considered Minimalism, where each component serves multiple purposes through clever design rather than brute-force complexity. This approach yields efficient use of resources while maintaining clarity and serviceability. 
+
+The platform embraces Pragmatic Modernization, incorporating contemporary interfaces and manufacturing techniques in ways that preserve the system's accessibility and educational value. This careful integration of modern elements enhances rather than obscures the fundamental simplicity of the design.
+
+Flexible Evolution stands as another cornerstone of the architecture. The system accommodates various processor and memory configurations while maintaining a consistent programming model, allowing it to grow with user needs without compromising its core principles.
+
+The following sections detail how these principles manifest in specific aspects of the system architecture, from processor selection to memory management and I/O subsystems.
 
 == System Architecture
 The Aves platform's architectural heritage stems from the remarkable family of Commodore 8-bit and 16-bit computers, drawing particular inspiration from the CBM8096, Commodore 64 and Plus/4 machines. Whilst these classic designs laid the groundwork, Aves refines and modernises their most successful elements into a cohesive and elegant architecture.
@@ -39,7 +61,11 @@ Throughout the system, one finds this pattern of respectful modernisation. The h
 This architectural philosophy extends to the physical design as well. The circuit board layouts, component selection, and signal routing all reflect a balance between simplicity and capability. Modern manufacturing techniques and components are employed where beneficial, yet the system remains accessible to hobbyist construction and modification, maintaining the spirit of its predecessors.
 
 === Processor Options
-Aves offers a choice of 8 and 16 bit CPUs within a common architecture. Use of a CPU for I/O operations maximises the re-use of Kernal code and simplifies the task of supporting multiple architectures. All CPUs are CMOS variants consume less power and run at speed of at least 4MHz.
+Aves offers a choice of 8 and 16-bit CPUs within a common architecture. The platform's I/O operations are handled by an 8-bit CPU to maximise Kernel code reuse and simplify multi-architecture support. All CPUs are CMOS variants for reduced power consumption.
+
+The 6502's minimal register set and zero-page usage as pseudo registers provides excellent interrupt latency. When paired with support chips like the 6522 Versatile Interface Adapter (VIA), this makes it an ideal choice for I/O handling.
+
+In dual processor configurations, a R65C02 running at 4MHz serves as the I/O co-processor, working alongside primary CPUs such as the V25/V35, Z16C00, or MC68HC000. Communication between processors occurs through dual port memory, creating a loosely coupled architecture that simplifies inter-CPU communication and allows each processor to run at its optimal clock speed.
 
 .Supported CPU Types
 [%header, cols="2,3"]
@@ -53,28 +79,20 @@ Aves offers a choice of 8 and 16 bit CPUs within a common architecture. Use of a
 |The Western Design Center WDC65C02 is currently in production. WDC were the creators of the CPU core used in the R65C02, and the WDC65C02 is later version of this core. The same instruction set is used but the CPU it can be run at 14MHz, is fully static and can has tri-state address and data bus lines. A new WAI instruction stops the CPU clock and reduces power to a minimum, it will restart when an interrupt occurs
 
 |WDC65816
-|The Western design center WDC65816 is a 16 bit variant of the WDC65C02 with an 8 bit emulation mode as well as 24 bit segmented address bus. The WDC65C816 has a maximum clock speed of 14MHz
+|The Western design center WDC65816 is a 16-bit variant of the WDC65C02 with an 8-bit emulation mode as well as 24 bit segmented address bus. The WDC65C816 has a maximum clock speed of 14MHz
 
 |NEC V25 and V35
-|The NEC (now Renesas) V25 and V35 are CMOS variants of the Intel 8088 and 8086 respectively, with integrated UARTs, Timers, GPIO and DMA. The V25 has an 8 bit data bus and the V35 has a 16 biot bus both have a 20 bit address bus. which uses the same segmented strategy used by Intel
+|The NEC (now Renesas) V25 and V35 are CMOS variants of the Intel 8088 and 8086 respectively, with integrated UARTs, Timers, GPIO and DMA. The V25 has an 8-bit data bus and the V35 has a 16-bit bus both have a 20 bit address bus. which uses the same segmented strategy used by Intel
 
 |MC68HC000
 |The Motorola MC68HC000 highly successful and well regarded CPU, was used to power the Commodore Amiga and Atari ST computers. Its architecture and performance were a breakthrough, and this CPU is adopted to pay homage to such an innovation. 
 
-The MC68HC000 had a 32 bit addressing capability with 24 bit address bus width. It has a maximum clock speed of 10MHz, and has a dual mode CPU bus timing that supports older 6800 and 6500 8 bit peripherals, as well as an updated asynchronous native bus. 
+The MC68HC000 had a 32 bit addressing capability with 24 bit address bus width. It has a maximum clock speed of 10MHz, and has a dual mode CPU bus timing that supports older 6800 and 6500 8-bit peripherals, as well as an updated asynchronous native bus. 
 
 |Z16C00
-|The Z16C01 is a CMOS version of the Zilog Z8001 CPU, and is included as a curiosity and acknowledgment of the Commodore C900 Zilog Z8001 based "UNIX machine" prototype. The Z8001 was another 16 bit CPU that was developed at around the same time as the Intel 8086 and Motorola 68000. The Z8001 used a 24 bit segmented architecture, although only 23 bits where available on the address bus. The Z16C01 has a maximum clock frequency of 10MHz 
+|The Z16C01 is a CMOS version of the Zilog Z8001 CPU, and is included as a curiosity and acknowledgment of the Commodore C900 Zilog Z8001 based "UNIX machine" prototype. The Z8001 was another 16-bit CPU that was developed at around the same time as the Intel 8086 and Motorola 68000. The Z8001 used a 24 bit segmented architecture, although only 23 bits where available on the address bus. The Z16C01 has a maximum clock frequency of 10MHz 
 
 |===
-3. CPU configuration options
-   - Single processor modes
-   - Dual processor arrangements
-   - CPU/bus relationships
-   - Clock selection and distribution
-
-4. Processor-specific features
-   - Interrupt handling differences
 
 === Memory Architecture
 The elegant simplicity of the Aves architecture finds perhaps its clearest expression in its memory management system. Here, the platform's philosophy of considered minimalism meets the practical demands of modern computing, resulting in a memory architecture that is both powerful and approachable. Drawing upon decades of experience with 6502-family systems, this design accommodates everything from simple linear arrangements to sophisticated banking schemes, all whilst maintaining a consistent programming model.
@@ -88,10 +106,10 @@ For more demanding applications, a sophisticated banking scheme allows this same
 
 The most advanced memory configuration introduces a segmented architecture, managing 512K of RAM alongside 128K of Flash EEPROM. This arrangement maintains compatibility with simpler configurations by presenting a linear architecture in its initial segment, whilst providing expanded capabilities for more sophisticated applications.
 
-A single 8 bit register provides control of the banked memory and provides a mechanism for memory and I/O overlays. 
+A single 8-bit register provides control of the banked memory and provides a mechanism for memory and I/O overlays. 
 
 ==== Bank Switching
-Bank switching is accomplished using a single 8 bit register to control the content of the upper memory area.
+Bank switching is accomplished using a single 8-bit register to control the content of the upper memory area.
 
 .Memory Control Register
 [%header, cols="1,1,3"]
@@ -116,7 +134,7 @@ Bank switching is accomplished using a single 8 bit register to control the cont
 
 |3,2
 |IB1, IB1
-|Controls wihich bank of immutable memory is accessible when InM is high (=1)
+|Controls which bank of immutable memory is accessible when InM is high (=1)
 
 |1,0
 |MB1, MB1
@@ -155,17 +173,62 @@ B1/B0: Ram bank bits 1 and 0 +
 A15: Address line 15 +
 MA16/MA15: Memory Address lines 16 and 15 +
 RAMb: RAM select inverted +
-ROMb: ROM select inverted +
+ROMb: ROM select inverted
 --
 
 ==== Memory Types and Configurations
+The Aves platform supports a diverse range of memory technologies to accommodate different use cases and requirements. At its foundation, the system employs high-speed CMOS technology for optimal performance and power efficiency. For primary system memory, 8-bit wide Static RAM provides reliable and fast access times with straightforward interfacing requirements.
+
+Program storage can be implemented through either 8-bit wide UV erasable EPROM for permanent installations, or 8-bit wide FLASH EEPROM for higher capacity requirements. For specialised applications requiring simultaneous access from multiple memory busses, 8-bit wide dual port static RAM is supported, enabling efficient data sharing.
+
+This flexibility in memory configuration allows system designers to optimise their builds for specific requirements, whether prioritising cost, performance, or functionality.
 
 === Bus Architecture
-==== Single Linear Bus (R65C02)
-==== Shared Banked Bus (W65C02)
-==== Shared Segmented Bus (W65816)
-==== Dual CPU 8-bit Bus (R65C02 + V25)
-==== Dual CPU 16/8-bit Bus Configurations
+The Aves platform's bus architecture exemplifies its commitment to flexibility and scalability while maintaining operational simplicity. From straightforward single-CPU configurations to sophisticated dual-processor arrangements, the bus structure adapts to support various processing needs without compromising system integrity or performance.
+
+At its most basic, the architecture provides a clean, linear bus design optimised for the R65C02, or WDC65C02 offering direct memory access and predictable timing characteristics. This foundation evolves through increasingly sophisticated implementations, including banked and segmented arrangements for enhanced memory management, culminating in dual-CPU configurations that enable parallel processing capabilities.
+
+Each bus configuration maintains compatibility with the platform's core I/O systems while providing specific advantages for different use cases. The following sections detail these implementations, from fundamental single-CPU arrangements to advanced multi-processor configurations.
+
+.Bus Architecture Configurations
+[%header, cols="2,4"]
+|===
+|Bus Type|Description
+
+|Single Linear Bus
+|Basic configuration providing direct address space access with predictable timing characteristics. Supports up to 64K of directly addressable memory with no banking or segmentation.
+
+|Shared Banked Bus
+|Configuration designed for DMA controllers and video display systems, allowing direct memory access without CPU intervention. Multiple devices can access memory banks while maintaining CPU operation, particularly useful for video frame buffers and high-speed data transfers.
+
+|Segmented Bus
+|Memory management scheme dividing address space into segments, providing flexibility in memory allocation while maintaining straightforward programming model. Commonly used in systems requiring more than 64K of addressable space.
+
+|Dual CPU Bus
+|Specialised configuration enabling two processors to share memory space through dual-port RAM. Each processor maintains independent bus timing and width,  while using their own resources in isolation. Data and commands is shared between them using the Dual port RAM. 
+
+|===
+
+.Bus Architecture Configurations
+[%header, cols="2,4"]
+|===
+|Bus Type|Description
+
+|Single Linear Bus
+|Basic configuration providing direct address space access with predictable timing characteristics. Supports up to 64K of directly addressable memory with no banking or segmentation.
+
+|Shared Banked Bus
+|Enhanced configuration supporting multiple 32K banks in upper memory space. Maintains compatibility with linear bus operations in lower memory while enabling access to expanded memory through bank switching.
+
+|Shared Segmented Bus
+|Advanced memory management supporting up to 16MB of addressable space through memory segmentation. Provides backward compatibility through an emulation mode while enabling extended addressing capabilities.
+
+|Dual CPU Linear Bus
+|Specialized configuration enabling two processors to share memory space through dual-port RAM. Each processor maintains independent bus timing and control while sharing common resources.
+
+|Dual CPU Split Bus
+|Sophisticated arrangement with separate data bus widths for each processor. Enables efficient operation of both 8-bit and 16-bit processors while maintaining system integration through shared memory spaces.
+|===
 
 === Interface Systems
 ==== W65C22 VIA Implementation
@@ -199,8 +262,8 @@ Current versions of these datasheets may be obtained from:
 The specific versions used in developing Aves are preserved in the project repository under `/doc/datasheets/` to ensure reproducible builds and consistent reference.
 --
 
-= Aves 8 Bit Models
+== Aves 8-bit Models
 
-= Aves Peripherals
+== Aves Peripherals
 
-= Aves 16 Bit Models
+== Aves 16-bit Models
