@@ -1,0 +1,189 @@
+= Aves Hardware Reference Manual
+Malcolm North, February 2025
+:doctype: book
+// :title-page-background-image: image:logo.png[]
+:title-logo-image: image:kingfisher.jpg[top=0.5in,align=center,pdfwidth=7in]
+:pdf-page-size: a4
+:toc:
+:sectnums:
+:sectnumlevels: 1
+:partnums:
+:chapter-signifier: Chapter
+:part-signifier: Part
+:media: prepress== Introduction
+
+== Introduction
+The Aves hardware platform represents a flexible and extensible 8/16-bit computer architecture designed to bridge classic computing with modern interfaces and capabilities. Named after the taxonomic class of birds, Aves embodies both elegance and adaptability in its design.
+
+This system supports multiple processor configurations, from the classic R65C02 to the more advanced W65816, with options for dual-processor arrangements incorporating the V25. The architecture accommodates various memory configurations, from simple linear addressing to sophisticated bank-switched and segmented memory layouts, providing up to 2MB of addressable space.
+
+At its core, Aves combines the simplicity and reliability of 8-bit systems with some of the expandability of contemporary systems. The platform features a versatile I/O subsystem built around the W65C22 VIA, supporting multiple communication protocols including I2C, SPI, and the custom Aves Serial Bus (ASB).
+
+This hardware reference manual provides comprehensive documentation of the Aves system architecture, memory configurations, bus arrangements, and interface specifications. It serves as the authoritative reference for hardware developers, system programmers, and enthusiasts working with the Aves platform.
+
+== System Architecture
+The Aves platform's architectural heritage stems from the remarkable family of Commodore 8-bit and 16-bit computers, drawing particular inspiration from the CBM8096, Commodore 64 and Plus/4 machines. Whilst these classic designs laid the groundwork, Aves refines and modernises their most successful elements into a cohesive and elegant architecture.
+
+At the heart of every Aves system lies a philosophy of considered minimalism, where each component serves multiple purposes through clever design rather than brute-force complexity. This approach manifests most notably in the memory management and I/O subsystems, where time-tested concepts from the Commodore machines have been thoughtfully reimagined.
+
+The memory architecture pays homage to the innovative bank-switching schemes of its forebears. Where the CBM8096 introduced upper memory banking, and the Commodore 64 demonstrated the flexibility of ROM overlay techniques, Aves unifies these concepts into a sophisticated yet straightforward memory management system. This arrangement provides remarkable flexibility whilst maintaining compatibility with traditional software design patterns.
+
+Perhaps the most significant departure from tradition lies in the I/O subsystem. Where Commodore machines typically employed multiple interface adapters—CIAs, PIAs, and various custom chips—Aves consolidates these functions into a carefully orchestrated arrangement centred on the W65C22 VIA. This consolidation does not represent a compromise but rather an elegant solution that reduces complexity whilst expanding capabilities.
+
+The VIA implementation demonstrates the platform's pragmatic approach to modernisation. Through thoughtful programming of this versatile chip, Aves achieves compatibility with contemporary interfaces such as I2C and SPI, whilst also supporting a custom high-speed serial protocol, the Aves Serial Bus (ASB). This bus draws inspiration from the efficiency of Commodore's serial bus architecture whilst eliminating its notorious timing dependencies.
+
+Throughout the system, one finds this pattern of respectful modernisation. The hardware banking mechanisms, whilst more sophisticated than their predecessors, maintain familiar programming paradigms. The interrupt handling system, though more capable than the original Commodore implementations, remains straightforward and predictable. Even the most advanced configurations, supporting the 16-bit W65816 processor, retain compatibility with their 8-bit siblings through carefully considered hardware abstractions.
+
+This architectural philosophy extends to the physical design as well. The circuit board layouts, component selection, and signal routing all reflect a balance between simplicity and capability. Modern manufacturing techniques and components are employed where beneficial, yet the system remains accessible to hobbyist construction and modification, maintaining the spirit of its predecessors.
+
+=== Processor Options
+
+This section would cover:
+1. Supported CPU types and their characteristics
+   - R65C02 (speed grades, features)
+   - W65C02 (differences from R65C02)
+   - W65816 (16-bit capabilities)
+   - V25 (when used as co-processor)
+
+2. Clock frequencies and timing
+   - Standard operating frequencies
+   - Bus timing relationships
+   - System clock generation and distribution
+   - Wait state requirements
+
+3. CPU configuration options
+   - Single processor modes
+   - Dual processor arrangements
+   - CPU/bus relationships
+   - Clock selection and distribution
+
+4. Processor-specific features
+   - R65C02/W65C02 specific capabilities
+   - W65816 native vs emulation modes
+   - V25 specific features when used
+   - Interrupt handling differences
+
+=== Memory Architecture
+The elegant simplicity of the Aves architecture finds perhaps its clearest expression in its memory management system. Here, the platform's philosophy of considered minimalism meets the practical demands of modern computing, resulting in a memory architecture that is both powerful and approachable. Drawing upon decades of experience with 6502-family systems, this design accommodates everything from simple linear arrangements to sophisticated banking schemes, all whilst maintaining a consistent programming model.
+
+==== Memory Map
+At its foundation, every Aves configuration provides a reliable foundation of fixed RAM in the lower half of the addressable space, spanning from address 0x0000 to 0x7FFF. This arrangement ensures compatibility across the entire family of Aves systems whilst providing a stable environment for critical system operations and application workspace.
+
+The upper memory space, however, reveals the true versatility of the architecture. Here, the three distinct approaches to memory organisation serve different needs whilst maintaining compatibility with their siblings. The simplest arrangement implements a straightforward linear EPROM occupying the space from 0x8000 to 0xFDFF, providing 31.5K of program storage, maximimising the availability of memory and utilising the most popular memory sizes available.
+
+For more demanding applications, a sophisticated banking scheme allows this same 31.5K space to accommodate both a 128K Flash EEPROM and 128K of banked RAM. This configuration proves particularly valuable in scenarios requiring rapid context switching or managing multiple concurrent tasks.
+
+The most advanced memory configuration introduces a segmented architecture, managing 512K of RAM alongside 128K of Flash EEPROM. This arrangement maintains compatibility with simpler configurations by presenting a linear architecture in its initial segment, whilst providing expanded capabilities for more sophisticated applications.
+
+A single 8 bit register provides control of the banked memory and provides a mechanism for memory and I/O overlays. 
+
+==== Bank Switching
+Bank switching is accomplished using a single 8 bit register to control the content of the upper memory area.
+
+.Memory Control Register
+[%header, cols="1,1,3"]
+|===
+|Bit Number|Name|Description
+
+|7
+|InM
+|When this bit is low (=0) expanded RAM is accessible in the upper memory area up to 0xFDFF. When lo ROM is accessible.
+
+|6
+|W1b
+|Enables access to a 1K window at 0xFC00
+
+|5
+|W2b
+|Enables access to a 2K window at 0xF800
+
+|4
+|W2b
+|Enables access to a 4K window at 0xF000
+
+|3,2
+|IB1, IB1
+|Controls wihich bank of immutable memory is accessible when InM is high (=1)
+
+|1,0
+|MB1, MB1
+|Controls which bank of mutable memory is accessible when InM is low (=0)
+
+|===
+
+.Standard Bank Switching Arrangement
+[%header, cols="1,1,1,1,1,1,1,1,1,1,1,1"]
+|===
+|Den|ENb|RnW|R1|R0|B1|B0|A15|MA16|MA15|RAMb|ROMb
+12.+|Main Memory
+|1  |x  |x  |x |x |x |x |x  |1   |0   |0   |1 
+12.+|RAM Banks  
+|0  |x  |x  |x |x |0 |0 |1  |0   |1   |0   |1   
+|0  |x  |x  |x |x |0 |1 |1  |1   |0   |0   |1     
+|0  |x  |x  |x |x |1 |0 |1  |1   |1   |0   |1     
+12.+|ROM Write Through  
+|0  |x  |0  |x |x |x |x |1  |x   |x   |0   |1     
+12.+|ROM Banks  
+|0  |1  |1  |0 |0 |x |x |1  |0   |0   |1   |0
+|0  |1  |1  |0 |1 |x |x |1  |0   |1   |1   |0    
+|0  |1  |1  |1 |0 |x |x |1  |1   |0   |1   |0     
+|0  |1  |1  |1 |1 |x |x |1  |1   |1   |1   |0     
+|===
+
+[NOTE]
+--
+Table Legend
+
+Den: Display Enable +
+ENb: Enable (inverted) +
+RnW: Read/Write +
+R1/R0: ROM bank bits 1 and 0 +
+B1/B0: Ram bank bits 1 and 0 +
+A15: Address line 15 +
+MA16/MA15: Memory Address lines 16 and 15 +
+RAMb: RAM select inverted +
+ROMb: ROM select inverted +
+--
+
+==== Memory Types and Configurations
+
+=== Bus Architecture
+==== Single Linear Bus (R65C02)
+==== Shared Banked Bus (W65C02)
+==== Shared Segmented Bus (W65816)
+==== Dual CPU 8-bit Bus (R65C02 + V25)
+==== Dual CPU 16/8-bit Bus Configurations
+
+=== Interface Systems
+==== W65C22 VIA Implementation
+The system uses a single W65C22 Versatile Interface Adapter supporting:
+
+* Bit-banged I2C
+* Bit-banged SPI
+* Shift register based Aves Serial Bus (ASB)
+
+==== I2C Interface
+==== SPI Interface
+==== Aves Serial Bus (ASB)
+
+[bibliography]
+== References
+
+* [[[wdc65c02,1]]] Western Design Center, "W65C02S 8-bit Microprocessor", Publication 651xx-14 Rev. 8.0
+* [[[wdc65816,2]]] Western Design Center, "W65C816S 16-bit Microprocessor", Publication 655xx-16 Rev. 10.0
+* [[[wdc65c22,3]]] Western Design Center, "W65C22S Versatile Interface Adapter", Publication 652xx-14 Rev. 4.0
+* [[[necv25,4]]] NEC Electronics, "V25 16-bit Single Chip CMOS Microcomputer", Document ID: S11988EJ3V0UM00
+* [[[as6c1008,5]]] Alliance Memory, "AS6C1008 128K x 8 Low Power CMOS SRAM", Rev. 1.0
+
+[NOTE]
+--
+Current versions of these datasheets may be obtained from:
+
+* Western Design Center documents: Available from manufacturer website or preserved copies in Aves repository
+* NEC/Renesas documents: Available from Renesas historical documentation archive
+* Memory datasheets: Available from current manufacturers of compatible devices
+
+The specific versions used in developing Aves are preserved in the project repository under `/doc/datasheets/` to ensure reproducible builds and consistent reference.
+--
+
+
