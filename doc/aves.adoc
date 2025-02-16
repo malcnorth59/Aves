@@ -109,28 +109,28 @@ The most advanced memory configuration introduces a segmented architecture, mana
 A single 8-bit register provides control of the banked memory and provides a mechanism for memory and I/O overlays. 
 
 ==== Bank Switching
-Bank switching is accomplished using a single 8-bit register to control the content of the upper memory area.
+Bank switching is accomplished using a single 8-bit register to control the content of the upper memory area (0x8000-0xFDFF). MCR is a write only register, that should only be written to from outside the upper memory area.
 
-.Memory Control Register
+.Memory Control Register (MCR)
 [%header, cols="1,1,3"]
 |===
 |Bit Number|Name|Description
 
 |7
-|InM
-|When this bit is low (=0) expanded RAM is accessible in the upper memory area up to 0xFDFF. When lo ROM is accessible.
+|MnI
+|When this bit is high (=1) expanded RAM is accessible in the upper memory area up to 0xFDFF. When low ROM is accessible.
 
 |6
-|W1b
-|Enables access to a 1K window at 0xFC00
+|IO1
+|Enables access to additional I/O space between 0xFD00 and 0xFDFF. When this bit is set there is no access to anyROM or RAM banks at this address
 
 |5
-|W2b
-|Enables access to a 2K window at 0xF800
+|IO2
+|Enables access to additional I/O space between 0xFC00 and 0xFCFF. When this bit is set there is no access to anyROM or RAM banks at this address
 
 |4
-|W2b
-|Enables access to a 4K window at 0xF000
+|DPM
+|Enables access to a 4K window at 0xE000 for dual port memory. When this bit is set there is no access to anyROM or RAM banks at this address
 
 |3,2
 |IB1, IB1
@@ -191,7 +191,7 @@ At its most basic, the architecture provides a clean, linear bus design optimise
 Each bus configuration maintains compatibility with the platform's core I/O systems while providing specific advantages for different use cases. The following sections detail these implementations, from fundamental single-CPU arrangements to advanced multi-processor configurations.
 
 .Bus Architecture Configurations
-[%header, cols="2,4"]
+[%header, cols="2,3"]
 |===
 |Bus Type|Description
 
@@ -212,6 +212,40 @@ Each bus configuration maintains compatibility with the platform's core I/O syst
 === I/O Ports
 All Aves models support the same set of I/O ports of two industry standard serial ports, a custom shift register based serial bus and a parallel memory mapped I/O expansion bus. All of the serial interfaces are implemented on a single W65C22.
 
+==== I/O Memory Map 
+I/O is directly mapped into the processors 64K memory map, the Aves architecture reserves the top 256 bytes of the address space (0xFF00-0xFFFF) for reset vectors, interrupt handing, and bank switching. the next 256 bytes (0xFE00-0xFEFF) is reserved for I/O devices
+
+The next two 256 bytes areas between  0xFC00-0xDFF can also be enabled for I/O access using bits 6 and 5 in the MCR. 
+
+The area from 0xE000-0xEFFF can also be reserved for dual port memory, and is selected using bit 5 of the MCR
+
+.I/O Addresses Table 
+[%header, cols="2,3"]
+|===
+|Address range|Description
+
+|0xFF00-0xFFFF
+|Always available +
+Reset and Interrupt Vectors +
+Bank switching code
+
+|0xFE00-0xFEFF
+|Always available, containing: +
+1 x W65C22 VIA +
+1 x PS/2 Kbd I/F (74HC595 Shift Register) +
+1 x 8-bit control register (74HC273)
+
+|0xFD00-0xFDFF
+|Enabled with bit 6 of control register, used for accessing 1MHz 65XX peripherals
+
+|0xFC00-0xFCFF
+|Enabled with bit 5 of control register, available for additional user I/O devices on the expansion port
+
+|0xE000-0xEFFF
+|4K slot for dual port memory or VIC colour memory
+
+|===
+
 ==== I2C Interface
 The I2C interface is implemented in software using PA0 of the VIA for SCL and PA7 for SDA. This arrangement provides optimal bit manipulation capabilities, as testing bit 7 with the BIT instruction will directly affect the processor's N flag for efficient state testing. Both lines require external 4.7kΩ pull-up resistors to VCC to ensure proper signal levels and to meet I2C bus specifications.
 
@@ -220,12 +254,65 @@ The implementation leverages specific characteristics of the 65C02 instruction s
 The interface supports standard mode I2C operation at 100 kHz, with timing managed through software delays calibrated to the system clock frequency. Clock stretching is supported through continuous monitoring of the SCL line state, allowing compatibility with slower I2C peripheral devices. Multi-master mode is not supported.
 
 ==== SPI Interface
+The SPI interface is implemented in firmware, as modes 0 and 3 only. As with the I2C interface the clock; SCK is implemented on PB0, PB1-PB3 contains the device number and is decoded with a 74HC138 decoder to provide 7 device selects ss1-ss7.
+
+MOSI uses PB6 and MISO PB7. 
+
+SPI is level converted to 3.3V for compatibility with most SPI memory and IO devices.
+
 ==== Aves Serial Bus (ASB)
+The Aves serial bus uses the VIA shift register to implement a half duplex serial protocol, that is substantially faster than Commodore's propitiatory Serial bus (frequently incorrectly referred to as IEC). The VIA's CAn lines are used as handshake lines. PA6 is used to determine if the bus is transmitting or receiving
 
 ==== PS/2 Keyboard Interface
 The PS/2 Keyboard interface is based on Ben Eater's PS/2 keyboard interface design, which uses 74HC595 shift registers. Unlike Ben's implementation, data is read directly from the register's parallel output, freeing up 8 additional I/O lines on the VIA. The interrupt logic remains unchanged, using the VIA's CA1 input to detect incoming data.
 
 ==== I/O expansion port 
+The I/O expansion port is presented on a 34 pin right angle male header, it comprises the 8 x data lines, 12 x address lines, 4 x select lines, RnW, Phi2, RESETb, IRQb, power and gnd.
+
+.Expansion Port Pinout
+[%header,rows="2,3"]
+|===
+|Pin No|Description
+
+|1,2
+|Ground
+
+|3-10
+|8 bit, Address Bus, A0-A7
+
+|11
+|RnW signal 1=read, 0=write
+
+|12
+|Phi2 clock, represents phase 2 of the system clock, which is used to synchronise all CPU operations
+
+|13-20
+|8 bit Data bus D0-D7
+
+|21-23
+|IOb1-IOb3, active low IO select signals
+
+|24
+|IRQb, Interrupt request, active low
+
+|25
+|RESb, Reset signal, active low
+
+|26
+|RDY, signals that the CPU can continue
+
+|27
+|BE, bus enable signal enables cpu address and data bus tristate buffers
+
+|28, 29
+|Not Used
+
+|31,32
+|+5V Supply
+
+|33,34
+|Ground
+|===
 
 [bibliography]
 == References
@@ -246,6 +333,19 @@ Current versions of these datasheets may be obtained from:
 * Memory datasheets: Available from current manufacturers of compatible devices
 
 The specific versions used in developing Aves are preserved in the project repository under `/doc/datasheets/` to ensure reproducible builds and consistent reference.
+--
+
+* [[[mc68hc000,7]]] Motorola, "MC68HC000 HCMOS Microprocessor", ADI1024R1
+* [[[z16c01,8]]] Zilog, "Z16C01/02 CMOS CPU with MMU", DC2144-01
+* [[[v35,9]]] NEC Electronics, "V35 16-bit Single-Chip CMOS Microcomputer User's Manual", Document ID: S11989EJ3V0UM00
+
+[NOTE]
+--
+The CPU timing specifications can be found in:
+* W65C02S/W65C816S - References [1] and [2]
+* V25/V35 - References [4] and [9]
+* MC68HC000 - Reference [7]
+* Z16C01 - Reference [8]
 --
 
 == Aves 8-bit Models
