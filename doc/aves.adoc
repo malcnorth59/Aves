@@ -15,7 +15,7 @@ Malcolm North, February 2025
 == Abstract
 The Aves hardware platform represents a flexible and extensible 8/16-bit computer architecture designed to bridge classic computing with modern interfaces and capabilities. Named after the taxonomic class of birds, Aves embodies both elegance and adaptability in its design.
 
-This system supports multiple processor configurations, from the classic R65C02 to the more advanced WDC65816, with options for dual-processor arrangements incorporating the V25, V35, Z8K and MC68K. The architecture accommodates various memory configurations, from simple linear addressing to sophisticated bank-switched and segmented memory layouts, providing up to 2MB of addressable space.
+This system supports multiple processor configurations, from the classic R65C02 to the more advanced W65816, with options for dual-processor arrangements incorporating the V25, V35, Z8K and MC68K. The architecture accommodates various memory configurations, from simple linear addressing to sophisticated bank-switched and segmented memory layouts, providing up to 2MB of addressable space.
 
 At its core, Aves combines the simplicity and reliability of 8-bit systems with some of the expandability of contemporary systems. The platform features a versatile I/O subsystem built around the W65C22 VIA, supporting multiple communication protocols including I2C, SPI, and the custom Aves Serial Bus (ASB).
 
@@ -75,11 +75,11 @@ In dual processor configurations, a R65C02 running at 4MHz serves as the I/O co-
 |R65C02
 |The Rockwell R65C02 is no longer in production, but is widely available as new old stock. It is used in several Aves models and  is always clocked at 4MHz. The R65C02 is pin compatible with the original MOS 6502, which was fabricated in NMOS. One of many advantages the 65C02 has over its NMOS sibling is an enhanced instruction set
 
-|WDC65C02
-|The Western Design Center WDC65C02 is currently in production. WDC were the creators of the CPU core used in the R65C02, and the WDC65C02 is later version of this core. The same instruction set is used but the CPU it can be run at 14MHz, is fully static and can has tri-state address and data bus lines. A new WAI instruction stops the CPU clock and reduces power to a minimum, it will restart when an interrupt occurs
+|W65C02
+|The Western Design Center W65C02 is currently in production. WDC were the creators of the CPU core used in the R65C02, and the W65C02 is later version of this core. The same instruction set is used but the CPU it can be run at 14MHz, is fully static and can has tri-state address and data bus lines. A new WAI instruction stops the CPU clock and reduces power to a minimum, it will restart when an interrupt occurs
 
-|WDC65816
-|The Western design center WDC65816 is a 16-bit variant of the WDC65C02 with an 8-bit emulation mode as well as 24 bit segmented address bus. The WDC65C816 has a maximum clock speed of 14MHz
+|W65816
+|The Western design center W65816 is a 16-bit variant of the W65C02 with an 8-bit emulation mode as well as 24 bit segmented address bus. The W65C816 has a maximum clock speed of 14MHz
 
 |NEC V25 and V35
 |The NEC (now Renesas) V25 and V35 are CMOS variants of the Intel 8088 and 8086 respectively, with integrated UARTs, Timers, GPIO and DMA. The V25 has an 8-bit data bus and the V35 has a 16-bit bus both have a 20 bit address bus. which uses the same segmented strategy used by Intel
@@ -186,7 +186,7 @@ This flexibility in memory configuration allows system designers to optimise the
 === Bus Architecture
 The Aves platform's bus architecture exemplifies its commitment to flexibility and scalability while maintaining operational simplicity. From straightforward single-CPU configurations to sophisticated dual-processor arrangements, the bus structure adapts to support various processing needs without compromising system integrity or performance.
 
-At its most basic, the architecture provides a clean, linear bus design optimised for the R65C02, or WDC65C02 offering direct memory access and predictable timing characteristics. This foundation evolves through increasingly sophisticated implementations, including banked and segmented arrangements for enhanced memory management, culminating in dual-CPU configurations that enable parallel processing capabilities.
+At its most basic, the architecture provides a clean, linear bus design optimised for the R65C02, or W65C02 offering direct memory access and predictable timing characteristics. This foundation evolves through increasingly sophisticated implementations, including banked and segmented arrangements for enhanced memory management, culminating in dual-CPU configurations that enable parallel processing capabilities.
 
 Each bus configuration maintains compatibility with the platform's core I/O systems while providing specific advantages for different use cases. The following sections detail these implementations, from fundamental single-CPU arrangements to advanced multi-processor configurations.
 
@@ -209,47 +209,33 @@ Each bus configuration maintains compatibility with the platform's core I/O syst
 
 |===
 
-.Bus Architecture Configurations
-[%header, cols="2,4"]
-|===
-|Bus Type|Description
-
-|Single Linear Bus
-|Basic configuration providing direct address space access with predictable timing characteristics. Supports up to 64K of directly addressable memory with no banking or segmentation.
-
-|Shared Banked Bus
-|Enhanced configuration supporting multiple 32K banks in upper memory space. Maintains compatibility with linear bus operations in lower memory while enabling access to expanded memory through bank switching.
-
-|Shared Segmented Bus
-|Advanced memory management supporting up to 16MB of addressable space through memory segmentation. Provides backward compatibility through an emulation mode while enabling extended addressing capabilities.
-
-|Dual CPU Linear Bus
-|Specialized configuration enabling two processors to share memory space through dual-port RAM. Each processor maintains independent bus timing and control while sharing common resources.
-
-|Dual CPU Split Bus
-|Sophisticated arrangement with separate data bus widths for each processor. Enables efficient operation of both 8-bit and 16-bit processors while maintaining system integration through shared memory spaces.
-|===
-
-=== Interface Systems
-==== W65C22 VIA Implementation
-The system uses a single W65C22 Versatile Interface Adapter supporting:
-
-* Bit-banged I2C
-* Bit-banged SPI
-* Shift register based Aves Serial Bus (ASB)
+=== I/O Ports
+All Aves models support the same set of I/O ports of two industry standard serial ports, a custom shift register based serial bus and a parallel memory mapped I/O expansion bus. All of the serial interfaces are implemented on a single W65C22.
 
 ==== I2C Interface
+The I2C interface is implemented in software using PA0 of the VIA for SCL and PA7 for SDA. This arrangement provides optimal bit manipulation capabilities, as testing bit 7 with the BIT instruction will directly affect the processor's N flag for efficient state testing. Both lines require external 4.7kΩ pull-up resistors to VCC to ensure proper signal levels and to meet I2C bus specifications.
+
+The implementation leverages specific characteristics of the 65C02 instruction set. The lines are manipulated using the data direction register to create a pseudo open-drain configuration - setting a pin as input allows it to float high via the pull-up resistor, while setting it as output drives it low. Start conditions are generated by transitioning SDA from high to low while SCL is high, with stop conditions created by the opposite transition. Clock generation employs increment and decrement instructions for precise timing control, while the BIT instruction enables rapid testing of PA7's state through the N flag.
+
+The interface supports standard mode I2C operation at 100 kHz, with timing managed through software delays calibrated to the system clock frequency. Clock stretching is supported through continuous monitoring of the SCL line state, allowing compatibility with slower I2C peripheral devices. Multi-master mode is not supported.
+
 ==== SPI Interface
 ==== Aves Serial Bus (ASB)
+
+==== PS/2 Keyboard Interface
+The PS/2 Keyboard interface is based on Ben Eater's PS/2 keyboard interface design, which uses 74HC595 shift registers. Unlike Ben's implementation, data is read directly from the register's parallel output, freeing up 8 additional I/O lines on the VIA. The interrupt logic remains unchanged, using the VIA's CA1 input to detect incoming data.
+
+==== I/O expansion port 
 
 [bibliography]
 == References
 
-* [[[wdc65c02,1]]] Western Design Center, "W65C02S 8-bit Microprocessor", Publication 651xx-14 Rev. 8.0
-* [[[wdc65816,2]]] Western Design Center, "W65C816S 16-bit Microprocessor", Publication 655xx-16 Rev. 10.0
-* [[[wdc65c22,3]]] Western Design Center, "W65C22S Versatile Interface Adapter", Publication 652xx-14 Rev. 4.0
+* [[[W65c02,1]]] Western Design Center, "W65C02S 8-bit Microprocessor", Publication 651xx-14 Rev. 8.0
+* [[[W65816,2]]] Western Design Center, "W65C816S 16-bit Microprocessor", Publication 655xx-16 Rev. 10.0
+* [[[W65c22,3]]] Western Design Center, "W65C22S Versatile Interface Adapter", Publication 652xx-14 Rev. 4.0
 * [[[necv25,4]]] NEC Electronics, "V25 16-bit Single Chip CMOS Microcomputer", Document ID: S11988EJ3V0UM00
 * [[[as6c1008,5]]] Alliance Memory, "AS6C1008 128K x 8 Low Power CMOS SRAM", Rev. 1.0
+* [[[eater,6]]] Ben Eater, "Building a 6502 computer", https://eater.net/6502
 
 [NOTE]
 --
