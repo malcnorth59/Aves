@@ -1,147 +1,161 @@
-/* Equations for Aves Sparrow and Robin
- *
- * Memory Map:
- * 0x0000-0x7FFF: Main RAM
- * 0x8000-0x8FFF: DPM when enabled
- * 0x8000-0xFBFF: Banked RAM/ROM
- * 0xFC00-0xFDFF: I/O (when io=1)
- * 0xFE00-0xFEFF: I/O (always)
- * 0xFF00-0xFFFF: ROM (always)
- *
- * Control Signals:
- *    bank_en:  Enables RAM banking in upper memory
- *    vacc:     Video access control
- *    ie0:      Selects second 32K page of ROM
- *    dpm:      Dual port memory control
- *    r_w:      Read/Write control (low for write)
- *    phi2:     System clock phase 2
- */
+Name     Aves_Memory_Decoder;
+PartNo   ATF22V10C;
+Date     2024;
+Revision 1.0;
+Designer Malcolm;
+Company  None;
+Assembly Aves Computer;
+Location None;
+Device   g22v10;
 
-/* Input pins */
-pin 1 = bank_en      /* Bank enable for upper memory */
-pin 2 = phi2         /* System clock phase 2 */
-pin 3 = r_w          /* Read/Write control */
-pin 4 = a8           /* Address lines 8-15 */
-pin 5 = a9
-pin 6 = a10
-pin 7 = a11
-pin 8 = a12
-pin 9 = a13
-pin 10 = a14
-pin 11 = a15
-pin 13 = io          /* I/O select */
-pin 23 = vacc        /* Video access control for VIC/TED/VIC-II */
-pin 14 = ie0         /* ROM page select for 64K EPROM */
+/*
+                ATF22V10C
+            _____    ____
+           /     \__/    \
+      vacc |1          24| Vcc
+      phi2 |2          23| ram_en
+       r_w |3          22| !wr
+        a8 |4          21| !ram_1
+        a9 |5          20| ma15
+       a10 |6          19| NC
+       a11 |7          18| NC
+       a12 |8          17| NC
+       a13 |9          16| !ram_2
+       a14 |10         15| !rom
+       a15 |11         14| ie0
+       GND |12         13| io
+           \_____________/
 
-/* Output Pins */
-pin 22 = wr istype 'com'        /* Write enable for static RAM */
-pin 15 = rom istype 'com'       /* ROM chip select */
-pin 21 = ram_1 istype 'com'     /* Lower 32K RAM chip select */
-pin 16 = ram_2 istype 'com'     /* Upper 32K RAM chip select */
-pin 20 = ma15 istype 'com'      /* Memory address bit 15 for ROM banking */
-pin 17 = dpm istype 'com'       /* Dual Port Memory chip select */
-pin 19 = nc1
-pin 18 = nc2
+Inputs:
+  1  - ram_en    : RAM enable (active high)
+  2  - phi2      : System clock phase 2
+  3  - r_w       : Read/Write (low = write)
+  4  - a8        : Address bit 8
+  5  - a9        : Address bit 9
+  6  - a10       : Address bit 10
+  7  - a11       : Address bit 11
+  8  - a12       : Address bit 12
+  9  - a13       : Address bit 13
+  10 - a14       : Address bit 14
+  11 - a15       : Address bit 15
+  13 - io        : I/O select (active high)
+  14 - ie0       : ROM page select
+  23 - vacc      : Video access (active high)
+
+Outputs:
+  15 - !rom      : ROM chip select
+  16 - !ram_2    : Upper RAM select
+  20 - ma15      : ROM bank address
+  21 - !ram_1    : Lower RAM select
+  22 - !wr       : Write enable
+
+Power:
+  12 - GND       : Ground
+  24 - Vcc       : +5V
+
+Not Connected:
+  17 - NC
+  18 - NC
+  19 - NC
+
+*/
+
+/* *************** INPUT PINS *********************/
+PIN 1  = vacc;       /* Video access control (active high) */
+PIN 2  = phi2;       /* System clock phase 2 (active high) */
+PIN 3  = r_w;        /* Read/Write control (active low for write) */
+PIN 4  = a8;         /* Address lines 8-15 */
+PIN 5  = a9;
+PIN 6  = a10;
+PIN 7  = a11;
+PIN 8  = a12;
+PIN 9  = a13;
+PIN 10 = a14;
+PIN 11 = a15;
+PIN 13 = io;         /* I/O select (active high) */
+PIN 14 = ie0;        /* ROM page select (active high) */
+PIN 23 = ram_en;    /* Video access control (active high) */
+
+/* *************** OUTPUT PINS ********************/
+PIN 22 = !wr;        /* Write enable */
+PIN 15 = !rom;       /* ROM chip select */
+PIN 21 = !ram_1;     /* Lower RAM select */
+PIN 16 = !ram_2;     /* Upper RAM select */
+PIN 20 = ma15;       /* ROM bank address bit */
+
+/* *************** DECLARATIONS *******************/
+FIELD address = [a15..a8];
 
 /* Memory region definitions */
-rom_hole  = a15 & a14 & a13 & a12 & a11 & a10 & a9 & a8    /* 0xFF00-0xFFFF */
-io_hole_1 = a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8   /* 0xFE00-0xFEFF */
-io_hole_2 = io & a15 & a14 & a13 & a12 & a11 & a10 & !a9   /* 0xFC00-0xFDFF */
-dpm_hole  = dpm & a15 & !a14 & !a13 & !a12                 /* 0x8000-0x8FFF */
+rom_hole  = a15 & a14 & a13 & a12 & a11 & a10 & a9 & a8;     /* 0xFF00-0xFFFF - permanent */
+io_hole_1 = a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8;    /* 0xFE00-0xFEFF - permanent */
+io_hole_2 = io & a15 & a14 & a13 & a12 & a11 & a10 & !a9;    /* 0xFC00-0xFDFF - dynamic */
+dpm_hole  = io & a15 & !a14 & !a13 & !a12;                   /* 0x8000-0x8FFF - dynamic */
 
-/* ROM select logic
- * Active for:
- *   Upper memory reads ROM when bank_en is low
- *   Always active in ROM hole
- *   Disabled during I/O, DPM, Upper RAM and video access
- */
-!rom    = !bank_en & a15 & r_w & !vacc & !(io_hole_1 + io_hole_2 + dpm_hole) \
-        + rom_hole
+/* *************** EQUATIONS *********************/
+/* ROM select logic */
+rom = !(!ram_en & a15 & r_w & !vacc & !(io_hole_1 # io_hole_2 # dpm_hole) 
+      # rom_hole);
 
-/* Lower RAM select (0x0000-0x7FFF)
- * Active for all lower memory access except during video access
- */
-!ram_1  = !a15 & !vacc
+/* Lower RAM select (0x0000-0x7FFF) */
+ram_1 = !(!a15 & !vacc);
 
-/* Upper RAM select (0x8000-0xFFFF)
- * Active for:
- *   Banked RAM access
- *   Write-through when ROM is selected
- *   All areas except I/O, DPM and ROM holes
- *   Used for VIC video buffers
- */
-!ram    = !vacc &  bank_en & !(io_hole_1 + io_hole_2 + dpm_hole) \
-        + !vacc & !bank_en & a15 & !r_w \
-        + !vacc & !rom_hole \
-        +  vacc 
+/* Upper RAM select (0x8000-0xFFFF) */
+ram_2 = !(!vacc & ram_en & !(io_hole_1 # io_hole_2 # dpm_hole)
+        # !vacc & !ram_en & a15 & !r_w
+        # !vacc & !rom_hole
+        # vacc);
 
-/* Memory address bit 15 control
- * Active when:
- *   Accessing second ROM bank
- *   Not accessing I/O or ROM holes
- */
-ma15    = !bank_en & a15 & ie0 & !(rom_hole + io_hole_1 + io_hole_2 + dpm_hole)
+/* Memory address bit 15 control */
+ma15 = !ram_en & a15 & ie0 & !(rom_hole # io_hole_1 # io_hole_2 # dpm_hole);
 
-/* Write enable control
- *    Active during phi2 high and r_w low
- *    Disabled during video access
- */
-!wr = phi2 & !r_w & !vacc
+TEST_VECTORS ([ram_en phi2 r_w a15 a14 a13 a12 a11 a10 a9 a8 io vacc ie0] => [wr rom ram_1 ram_2 ma15])
 
-/* DPM chip select */
-!dpm = phi2 & dpm_hole
+/* Video Access Priority Tests - should block everything */
+[0 1 1 0 0 0 0 0 0 0 0 0 1 0] => [1 1 1 1 0] /* Video blocks lower RAM */
+[0 1 1 1 1 1 1 1 1 1 1 0 1 0] => [1 1 1 1 0] /* Video blocks ROM area */
+[0 1 1 1 1 1 1 1 1 0 0 1 1 0] => [1 1 1 1 0] /* Video blocks I/O area */
+[0 1 1 1 0 0 0 0 0 0 0 1 1 0] => [1 1 1 1 0] /* Video blocks DPM area */
 
-/* Test vectors verify:
- *    Lower RAM access (0x0000-0x7FFF)
- *    Upper ROM access (0xFF00-0xFFFF)
- *    I/O space access
- *    Bank switching
- *    ROM write-through
- *    Video access blocking
- */
-test_vectors (
-    bank_en, phi2, r_w, 
-    a15,a14,a13,a12,a11,a10,a9,a8, 
-    io, vacc, ie0, dpm, 
-    wr,rom,ram_1,ram_2,ma15
+/* I/O and DPM Tests - io signal control */
+[0 1 1 1 1 1 1 1 1 0 0 1 0 0] => [1 1 1 0 0] /* IO2 active when io=1 */
+[0 1 1 1 1 1 1 1 1 0 0 0 0 0] => [1 0 1 1 0] /* IO2 inactive when io=0 */
+[0 1 1 1 0 0 0 0 0 0 0 1 0 0] => [1 1 1 0 0] /* DPM active when io=1 */
+[0 1 1 1 0 0 0 0 0 0 0 0 0 0] => [1 0 1 1 0] /* DPM inactive when io=0 */
 
-/* Test 1: Lower RAM read/write (0x0000-0x7FFF) */
-[0, 1, 1, 0,0,0,0,0,0,0,0, 0, 0, 0, 0, 1,1,0,1,0] /* Read from 0x0000 */
-[0, 1, 0, 0,0,0,0,0,0,0,0, 0, 0, 0, 0, 0,1,0,1,0] /* Write to 0x0000 */
+/* ROM Banking Tests - independent of I/O */
+[0 1 1 1 0 0 0 0 0 0 0 0 0 1] => [1 0 1 1 1] /* ROM page 1 with io=0 */
+[0 1 1 1 0 0 0 0 0 0 0 1 0 1] => [1 0 1 1 1] /* ROM page 1 with io=1 (outside IO/DPM areas) */
 
-/* Test 2: Upper ROM read (0xFF00-0xFFFF) */
-[0, 1, 1, 1,1,1,1,1,1,1,1, 0, 0, 0, 0, 1,0,1,1,0] % Read from 0xFFFF
-[0, 1, 0, 1,1,1,1,1,1,1,1, 0, 0, 0, 0, 0,0,1,1,0] % Write to 0xFFFF (ROM write-through)
+/* I/O Holes in ROM Space */
+[0 1 1 1 1 1 1 1 1 1 0 1 0 1] => [1 1 1 0 0] /* IO1 cuts hole in ROM space */
+[0 1 1 1 1 1 1 1 1 0 0 1 0 1] => [1 1 1 0 0] /* IO2 cuts hole in ROM space */
 
-/* Test 3: I/O access (0xFE00-0xFEFF) */
-[0, 1, 1, 1,1,1,1,1,1,1,0, 0, 0, 0, 0, 1,1,1,0,0] /* Read from 0xFE00 */
-[0, 1, 0, 1,1,1,1,1,1,1,0, 0, 0, 0, 0, 0,1,1,0,0] /* Write to 0xFE00 */
+/* DPM with Banking */
+[1 1 1 1 0 0 0 0 0 0 0 1 0 0] => [1 1 1 0 0] /* DPM active with banking */
+[1 1 1 1 0 0 0 0 0 0 0 0 0 0] => [1 1 1 0 1] /* Normal banking without DPM */
 
-/* Test 4: Bank switching (0x8000-0xFBFF) */
-[1, 1, 1, 1,0,0,0,0,0,0,0, 0, 0, 0, 0, 1,1,1,0,1] /* Read with banking enabled */
-[0, 1, 1, 1,0,0,0,0,0,0,0, 0, 0, 0, 0, 1,0,1,1,0] /* Read with banking disabled */
+/* Basic Operation Tests */
+[0 1 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0] /* Lower RAM read */
+[0 1 0 0 0 0 0 0 0 0 0 0 0 0] => [0 1 0 1 0] /* Lower RAM write */
+[0 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 0 1 1 0] /* ROM read */
+[0 1 0 1 1 1 1 1 1 1 1 0 0 0] => [0 0 1 1 0] /* ROM write-through */
 
-/* Test 5: ROM banking (IE0) */
-[0, 1, 1, 1,0,0,0,0,0,0,0, 0, 0, 1, 0, 1,0,1,1,1] /* Read from second ROM bank */
+/* Timing Tests - Address Setup and Hold */
+/* Address and R/W must be valid before phi2 rises */
+[0 0 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 0] /* Initial state, phi2 low */
+[0 1 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0] /* phi2 rises, address stable */
+[0 0 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 0] /* phi2 falls, address held */
 
-/* Test 6: DPM access */
-[0, 1, 1, 1,0,0,0,0,0,0,0, 0, 0, 0, 1, 1,1,1,0,0] /* Read from DPM area */
+/* Write Cycle Timing */
+[0 0 0 0 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 0] /* Setup R/W low, phi2 low */
+[0 1 0 0 0 0 0 0 0 0 0 0 0 0] => [0 1 0 1 0] /* phi2 rises, R/W stable */
+[0 0 0 0 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 0] /* phi2 falls, R/W held */
 
-/* Test 7: Video access blocking */
-[0, 1, 1, 0,0,0,0,0,0,0,0, 0, 1, 0, 0, 1,1,1,1,0] /* Lower RAM with video access */
+/* Address Change During phi2 High (should not happen) */
+[0 1 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0] /* Valid address, phi2 high */
+[0 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 0 1 0] /* Address change during phi2 high - undefined */
 
-[0, 1, 0, 0,0,0,0,0,0,0,0, 0, 1, 0, 0, 1,1,1,1,0] /* Write blocked during video access */
-
-/* Test 8: Additional I/O space (0xFC00-0xFDFF) */
-[0, 1, 1, 1,1,1,1,0,0,0,0, 1, 0, 0, 0, 1,1,1,0,0] /* Read from 0xFC00 with io=1 */
-
-/* Test 9: DPM write-through */
-[0, 1, 0, 1,0,0,0,0,0,0,0, 0, 0, 0, 1, 0,1,1,0,0] /* Write to DPM area */
-
-/* Test 10: Bank switching write */
-[1, 1, 0, 1,0,0,0,0,0,0,0, 0, 0, 0, 0, 0,1,1,0,1] /* Write with banking enabled */
-
-/* Test 11: Memory boundary test */
-[0, 1, 1, 1,0,0,0,0,0,0,0, 0, 0, 0, 0, 1,0,1,1,0] /* Read at 0x8000 boundary */
-
-)
+/* R/W Change During phi2 High (should not happen) */
+[0 1 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0] /* Read cycle, phi2 high */
+[0 1 0 0 0 0 0 0 0 0 0 0 0 0] => [0 1 0 1 0] /* Change to write during phi2 high - undefined */
