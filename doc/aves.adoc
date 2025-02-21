@@ -353,3 +353,8 @@ The CPU timing specifications can be found in:
 == Aves Peripherals
 
 == Aves 16-bit Models
+
+ns-1007.awsdns-61.net.
+ns-1905.awsdns-46.co.uk.
+ns-98.awsdns-12.com.
+ns-1353.awsdns-41.org.

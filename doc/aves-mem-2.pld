@@ -1,0 +1,187 @@
+/* Equations for Aves Memory Decoder 128K RAM, 128K ROM
+ *
+ * Memory Map:
+ * 0x0000-0x7FFF: Main RAM
+ * 0x8000-0x8FFF: dpm_hole when enabled
+ * 0x8000-0xFBFF: Banked RAM/ROM
+ * 0xFC00-0xFDFF: I/O (when io=1)
+ * 0xFE00-0xFEFF: I/O (always)
+ * 0xFF00-0xFFFF: ROM (always)
+ *
+ * Control Signals:
+ * bank_en: Enables RAM banking in upper memory
+ * vacc: Video access control
+ * ie0,ie1: ROM page select
+ * me0,me1: RAM page select
+ * r_w: Read/Write control (low for write)
+ * phi2: System clock phase 2
+ */
+
+/*
+                  ATF22V10
+                 ___________
+        bank_en |1    ∪   24| Vcc
+          phi2  |2        23| me0
+           r_w  |3        22| ie0
+            a8  |4        21| vacc
+            a9  |5        20| rom
+           a10  |6        19| ma15
+           a11  |7        18| ma16
+           a12  |8        17| ram
+           a13  |9        16| wr
+           a14  |10       15| ie1
+           a15  |11       14| me1
+           GND  |12       13| io
+                 ‾‾‾‾‾‾‾‾‾
+ 
+ Pin Types:
+ Inputs (12):     bank_en, phi2, r_w, a8-a15, io, me0-me1, ie0-ie1, vacc
+ Outputs (5):     wr, rom, ram, ma15, ma16 (all active low, combinatorial)
+ Power:           Vcc (pin 24), GND (pin 12)
+*/
+ 
+/* Input pins */
+pin 1 = bank_en      /* Bank enable for upper memory */
+pin 2 = r_w          /* Read/Write control */
+pin 3 = a8           /* Address lines 8-15 */
+pin 4 = a9
+pin 5 = a10
+pin 6 = a11
+pin 7 = a12
+pin 8 = a13
+pin 9 = a14
+pin 10 = a15
+pin 11 = io         /* I/O select */
+pin 13 = dpm        /* dpm select */
+pin 23 = vacc       /* Video access control */
+pin 14 = me0        /* RAM page select */
+pin 22 = me1        
+pin 15 = ie0        /* ROM page select */
+pin 21 = ie1        
+
+/* Output Pins */
+pin 16 = den istype 'com'        /* Write enable for static RAM */
+pin 20 = rom istype 'com'       /* Selects the 128K ROM */
+pin 17 = ram istype 'com'       /* Selects the 128K RAM */
+pin 19 = ma15 istype 'com'      /* Memory address bit 15 for ROM/RAM banking */
+pin 18 = ma16 istype 'com'      /* Memory address bit 16 for ROM/RAM banking */
+
+/* Memory region definitions */
+rom_hole  = a15 & a14 & a13 & a12 & a11 & a10 & a9 & a8    /* 0xFF00-0xFFFF */
+io_hole_1 = a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8   /* 0xFE00-0xFEFF */
+io_hole_2 = io & a15 & a14 & a13 & a12 & a11 & a10 & !a9   /* 0xFC00-0xFDFF */
+dpm_hole  = dpm & a15 & !a14 & !a13 & !a12                 /* 0x8000-0x8FFF */
+
+/* ROM select logic
+ * Active for:
+ *   Upper memory reads ROM when bank_en is low
+ *   Always active in ROM hole
+ *   Disabled during I/O, DPM, Upper RAM and video access
+ */
+!rom    = !bank_en & a15 & r_w & !vacc & !(io_hole_1 + io_hole_2 + dpm_hole) \
+        + rom_hole
+
+/* Lower RAM select (0x0000-0x7FFF)
+ * Active for all lower memory access except during video access
+ */
+!ram_1  = !a15 & !vacc
+
+/* Upper RAM select (0x8000-0xFFFF)
+ * Active for:
+ *   Banked RAM access
+ *   Write-through when ROM is selected
+ *   All areas except I/O, DPM and ROM holes
+ *   Used for VIC video buffers
+ */
+!ram    = !vacc &  bank_en & !(io_hole_1 + io_hole_2 + dpm_hole) \
+        + !vacc & !bank_en & a15 & !r_w \
+        + !vacc & !rom_hole \
+        +  vacc 
+
+/* Memory address bit 15 control
+ * Active when:
+ *   Accessing second ROM bank
+ *   Not accessing I/O or ROM holes
+ */
+ma15    = !bank_en & a15 & ie0 & !(rom_hole + io_hole_1 + io_hole_2 + dpm_hole)
+
+/* Write enable control
+ *    Active during phi2 high and r_w low
+ *    Disabled during video access
+ */
+!wr = phi2 & !r_w & !vacc
+
+/* DPM chip select */
+!dpm = phi2 & dpm_hole
+
+/* Memory region definitions - Address decoding equations
+ * rom_hole:  Fixed ROM area (0xFF00-0xFFFF)
+ * io_hole_1: Fixed I/O area (0xFE00-0xFEFF)
+ * io_hole_2: Switchable I/O area (0xFC00-0xFDFF) when io=1
+ * dpm_hole:  Dual port memory (0x8000-0x8FFF) when dpm=1
+ */
+rom_hole  = a15 & a14 & a13 & a12 & a11 & a10 & a9 & a8    /* ROM: 0xFF00-0xFFFF */
+io_hole_1 = a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8   /* I/O: 0xFE00-0xFEFF */
+io_hole_2 = io & a15 & a14 & a13 & a12 & a11 & a10 & !a9   /* I/O: 0xFC00-0xFDFF */
+dpm_hole  = dpm & a15 & !a14 & !a13 & !a12                 /* DPM: 0x8000-0x8FFF */
+
+/* ROM select logic
+ * Active for:
+ *   Upper memory reads ROM when bank_en is low
+ *   Always active in ROM hole
+ *   Disabled during I/O, DPM, Upper RAM and video access
+ */
+!rom    = !bank_en & a15 & r_w & !vacc & !(io_hole_1 + io_hole_2 + dpm_hole) \
+        + rom_hole
+
+/* Upper RAM select (0x8000-0xFFFF)
+ * Active for:
+ *   Banked RAM access
+ *   Write-through when ROM is selected
+ *   All areas except I/O, DPM and ROM holes
+ *   Used for VIC video buffers
+ */
+!ram    = bank_en & a15 & !vacc & !(io_hole_1 + io_hole_2 + dpm_hole) \
+        + !bank_en & a15 & !r_w & !vacc \
+        + !a15 & !vacc \
+        + !rom_hole \
+        + vacc
+
+test_vectors(
+    bank_en, phi2, r_w,
+    a15,a14,a13,a12,a11,a10,a9,a8,
+    io, me0, me1, ie0, ie1, vacc,
+    rom, ram, ma15, ma16, wr
+
+/* Lower RAM (0x0000-0x7FFF) */
+[   x,    1,   1,    0, x, x, x, x, x, x, x,    x,  x,  x,  x,  x,   0,     1,  0,   0,   0,  1];  /* Read */
+[   x,    1,   0,    0, x, x, x, x, x, x, x,    x,  x,  x,  x,  x,   0,     1,  0,   0,   0,  0];  /* Write */
+
+/* ROM hole (0xFF00-0xFFFF) */
+[   0,    1,   1,    1, 1, 1, 1, 1, 1, 1, 1,    x,  x,  x,  0,  0,   0,     0,  1,   0,   0,  1];  /* ROM page 0 */
+[   0,    1,   1,    1, 1, 1, 1, 1, 1, 1, 1,    x,  x,  x,  1,  1,   0,     0,  1,   1,   1,  1];  /* ROM page 3 */
+[   0,    1,   0,    1, 1, 1, 1, 1, 1, 1, 1,    x,  x,  x,  x,  x,   0,     0,  1,   0,   0,  0];  /* Write-through */
+
+/* I/O regions */
+[   x,    1,   1,    1, 1, 1, 1, 1, 1, 1, 0,    x,  x,  x,  x,  x,   0,     1,  1,   0,   0,  1];  /* FE00-FEFF */
+[   x,    1,   1,    1, 1, 1, 1, 1, 1, 0, x,    1,  x,  x,  x,  x,   0,     1,  1,   0,   0,  1];  /* FC00-FDFF */
+[   x,    1,   1,    1, 0, 0, 0, x, x, x, x,    1,  x,  x,  x,  x,   0,     1,  1,   0,   0,  1];  /* 8000-8FFF DPM */
+
+/* Banked RAM (0x8000-0xFBFF) */
+[   1,    1,   1,    1, 0, x, x, x, x, x, x,    0,  0,  0,  x,  x,   0,     1,  0,   0,   0,  1];  /* RAM bank 0 */
+[   1,    1,   1,    1, 0, x, x, x, x, x, x,    0,  1,  1,  x,  x,   0,     1,  0,   1,   1,  1];  /* RAM bank 3 */
+[   1,    1,   0,    1, 0, x, x, x, x, x, x,    0,  1,  0,  x,  x,   0,     1,  0,   1,   0,  0];  /* Write bank 1 */
+
+/* Banked ROM (0x8000-0xFBFF) */
+[   0,    1,   1,    1, 0, x, x, x, x, x, x,    0,  x,  x,  0,  0,   0,     0,  1,   0,   0,  1];  /* ROM bank 0 */
+[   0,    1,   1,    1, 0, x, x, x, x, x, x,    0,  x,  x,  1,  1,   0,     0,  1,   1,   1,  1];  /* ROM bank 3 */
+
+/* Video access */
+[   x,    1,   1,    0, x, x, x, x, x, x, x,    x,  x,  x,  x,  x,   1,     1,  1,   0,   0,  1];  /* Lower RAM */
+[   1,    1,   1,    1, x, x, x, x, x, x, x,    0,  x,  x,  x,  x,   1,     1,  1,   1,   0,  1];  /* Upper RAM */
+[   0,    1,   1,    1, x, x, x, x, x, x, x,    0,  x,  x,  x,  x,   1,     1,  1,   1,   0,  1];  /* Upper ROM */
+
+/* Clock and Write timing */
+[   x,    0,   0,    x, x, x, x, x, x, x, x,    x,  x,  x,  x,  x,   0,     1,  1,   0,   0,  1];  /* phi2 low */
+[   x,    1,   0,    x, x, x, x, x, x, x, x,    x,  x,  x,  x,  x,   0,     1,  1,   0,   0,  0];  /* phi2 high, write */
+)
