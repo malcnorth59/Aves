@@ -117,28 +117,31 @@ Bank switching is accomplished using a single 8-bit register to control the cont
 |Bit Number|Name|Description
 
 |7
-|MnI
+|RAM_EN
 |When this bit is high (=1) expanded RAM is accessible in the upper memory area up to 0xFDFF. When low ROM is accessible.
 
 |6
-|IO1
-|Enables access to additional I/O space between 0xFD00 and 0xFDFF. When this bit is set there is no access to anyROM or RAM banks at this address
+|IO
+|Enables access to additional I/O space between 0xFC00 and 0xFDFF. When this bit is set there is no access to any ROM or RAM at this address
+
+Enables access to a 4K window at 0x8000 for dual port memory. When this bit is set there is no access to any ROM or RAM at this address
+
 
 |5
-|IO2
-|Enables access to additional I/O space between 0xFC00 and 0xFCFF. When this bit is set there is no access to anyROM or RAM banks at this address
+|
+|Not Used
 
-|4
-|DPM
-|Enables access to a 4K window at 0xE000 for dual port memory. When this bit is set there is no access to anyROM or RAM banks at this address
+|4,3
+|IE1,IE0
+|Controls which page of ROM is accessible when RAM_EN is low (=0)
 
-|3,2
-|IB1, IB1
-|Controls which bank of immutable memory is accessible when InM is high (=1)
+|2
+|
+|Not Used
 
 |1,0
-|MB1, MB1
-|Controls which bank of mutable memory is accessible when InM is low (=0)
+|ME1, ME0
+|Controls which RAM page is accessible when RAM_EN is high (=1)
 
 |===
 
@@ -199,7 +202,7 @@ Each bus configuration maintains compatibility with the platform's core I/O syst
 |Basic configuration providing direct address space access with predictable timing characteristics. Supports up to 64K of directly addressable memory with no banking or segmentation.
 
 |Shared Banked Bus
-|Configuration designed for DMA controllers and video display systems, allowing direct memory access without CPU intervention. Multiple devices can access memory banks while maintaining CPU operation, particularly useful for video frame buffers and high-speed data transfers.
+|Configuration designed for DMA controllers and video display systems, allowing direct memory access without CPU intervention. Multiple devices can access memory banks while maintaining CPU operation, particularly useful for video frame buffers and higfh-speed data transfers.
 
 |Segmented Bus
 |Memory management scheme dividing address space into segments, providing flexibility in memory allocation while maintaining straightforward programming model. Commonly used in systems requiring more than 64K of addressable space.
