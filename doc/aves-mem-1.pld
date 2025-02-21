@@ -1,5 +1,5 @@
-Name     Aves_Memory_Decoder;
-PartNo   ATF22V10C;
+Name     Aves_64K_Memory_Decoder;
+PartNo   AV650801-01;
 Date     2024;
 Revision 1.0;
 Designer Malcolm;
