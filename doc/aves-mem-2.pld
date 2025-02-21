@@ -88,7 +88,7 @@ PIN 23 = ram_en;     /* RAM enable (active high) */
 /* *************** OUTPUT PINS ********************/
 PIN 16 = ma15;       /* Mapped address 15 */
 PIN 17 = ma16;       /* Mapped address 16 */
-PIN 19 = ram;        /* Ram chip select (active low) */
+PIN 19 = ram;        /* RAM chip select (active low) */
 PIN 20 = rom;        /* ROM chip select (active low) */
 
 /* *************** DECLARATIONS *******************/
