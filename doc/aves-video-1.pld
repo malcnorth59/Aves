@@ -18,6 +18,7 @@ Device   g22v10;
  * - 2K x 8 dual port RAM screen buffer
  * - 65C02 CPU interface
  * - 4 external interrupt inputs with hardware combining
+ * - Video cursor generation through signal inversion
  *
  * Video Output Specifications:
  * - Based on SVGA timing standards at reduced clock rate
@@ -27,8 +28,9 @@ Device   g22v10;
  *
  * The device synchronizes 6845 CRTC outputs with the system clocks,
  * generates required timing signals for the dual port RAM access,
- * provides clock management for the video subsystem, and combines
- * multiple interrupt sources into a single CPU interrupt.
+ * provides clock management for the video subsystem, combines
+ * multiple interrupt sources into a single CPU interrupt, and
+ * handles cursor display through video signal inversion.
  *
  * ATF22V10C Pinout:
  *                    ___________
@@ -37,21 +39,26 @@ Device   g22v10;
  *           clk8  3 |           | 22  dde
  *             hs  4 |           | 21  phi2b
  *             vs  5 |           | 20  dotclkb
- *           crsr  6 |           | 19  GND
+ *           crsr  6 |           | 19  video
  *             de  7 |           | 18  irqb
  *         dotclk  8 |           | 17  ldb
  *          irq1b  9 |           | 16  chckb
  *          irq2b 10 |           | 15  dcrsr
  *          irq3b 11 |           | 14  dhs
- *          irq4b 12 |           | 13  GND
+ *            GND 12 |           | 13  vidout
  *                   |___________|
  *
  * Interrupt Handling:
- * - Four active-low interrupt inputs (irq1b - irq4b)
+ * - Three active-low interrupt inputs (irq1b - irq3b)
  * - Combined into single active-low interrupt output (irqb)
  * - Any input going low will drive output low
  * - All inputs must be high for output to be high
  * - CPU can check individual status to determine source
+ *
+ * Video Cursor Generation:
+ * - vidout is the raw video input signal
+ * - dcrsr is the registered cursor signal
+ * - video output is XORed with cursor to create inversion effect
  *
  * Designer: Malcolm North
  * Date: 2025
@@ -69,10 +76,12 @@ PIN 5  = vs;        /* 6845 CRTC vertical sync output */
 PIN 6  = crsr;      /* 6845 CRTC cursor output */
 PIN 7  = de;        /* 6845 CRTC display enable output */
 pin 8  = dotclk;    /* Crystal oscillator output - video dot clock */
-pin 9  = irq1b      /* */
-pin 10 = irq2b      /* */
-pin 11 = irq3b      /* */
-pin 12 = irq4b
+
+pin 9  = irq1b;     /* Interrupt request 1 input (active low) */
+pin 10 = irq2b;     /* Interrupt request 2 input (active low) */
+pin 11 = irq3b;     /* Interrupt request 3 input (active low) */
+
+pin 13 = vidout;    /* Video data input */
 
 /* *************** OUTPUT PINS ********************/
 pin 14 = dhs;       /* Registered horizontal sync output */
@@ -83,7 +92,9 @@ PIN 16 = chckb;     /* Inverted character clock */
 PIN 21 = phi2b;     /* Inverted system clock phase 2 */
 pin 17 = ldb;       /* Shift register load signal (active low) */
 pin 20 = dotclkb;   /* Inverted dot clock */
-pin 18 = irqb       /* */
+
+pin 18 = irqb       /* Combined active low interrupt */
+pin 19 = video;     /* Cursor-modified video output */
 
 /* Synchronize 6845 CRTC outputs with character clock falling edge */
 dhs.d = hs;
@@ -102,4 +113,6 @@ ldb = !(!chck & !clk8 & !phi2);
 dotclkb = dotclk;
 
 /* Combine all interrupt inputs - any low input generates low output */
-irqb = !irq1b & !irq2b & !irq3b & !irq4b;
+irqb = !irq1b & !irq2b & !irq3b;
+
+video = vidout $ dcrsr;
