@@ -41,7 +41,7 @@ Device   g22v10;
  *            GND 10 |           | 15  dcrsr
  *            GND 11 |           | 14  dhs
  *            GND 12 |           | 13  GND
- *                    ___________
+ *                   |___________|
  *
  * Designer: Malcolm North
  * Date: 2025

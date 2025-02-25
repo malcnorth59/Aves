@@ -1,8 +1,8 @@
 Name     Aves_6502_IO;
 PartNo   AV650800-01;
-Date     2024;
+Date     2025;
 Revision 01;
-Designer Malcolm;
+Designer Malcolm North;
 Company  None;
 Assembly None;
 Location None;
@@ -22,7 +22,7 @@ Device   G22V10;
  * 0xFF00-0xFFFF | 256B  | ROM (always)
 
                   G22V10
-                 ________
+                  _______
             vacc |1    24| VCC
             phi2 |2    23| a6
              r_w |3    22| wait
@@ -35,7 +35,7 @@ Device   G22V10;
              a14 |10   15| kbd
              a15 |11   14| a7
              GND |12   13| io
-                 --------
+                 |_______|
  
  Input Pins:
   1: vacc  - Video access control (active high)
