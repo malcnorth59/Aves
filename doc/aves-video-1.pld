@@ -1,0 +1,87 @@
+Name     Aves_Memory_Decoder;
+PartNo   ATF22V10C;
+Date     2025;
+Revision 1.0;
+Designer Malcolm North;
+Company  None;
+Assembly Aves Computer;
+Location None;
+Device   g22v10;
+/*********************************************************************
+ * Aves Video Timing Controller
+ * 
+ * This PLD provides timing logic for a 6845 CRTC based video system:
+ * - 40 x 25 character text display (320 x 300 pixels)
+ * - 8 x 12 pixel character cell font
+ * - 16 color output capability
+ * - 2K x 8 dual port RAM screen buffer
+ * - 65C02 CPU interface
+ *
+ * Video Output Specifications:
+ * - Based on SVGA timing standards at reduced clock rate
+ * - Dot clock: 16 MHz
+ * - Horizontal: 40 characters (320 pixels)
+ * - Vertical: 25 characters (300 pixels)
+ *
+ * The device synchronizes 6845 CRTC outputs with the system clocks,
+ * generates required timing signals for the dual port RAM access,
+ * and provides clock management for the video subsystem.
+ *
+ * ATF22V10C Pinout:
+ *                    ___________
+ *           chck  1 |           | 24  VCC
+ *           phi2  2 |           | 23  dvs
+ *           clk8  3 |           | 22  dde
+ *             hs  4 |           | 21  phi2b
+ *             vs  5 |           | 20  dotclkb
+ *           crsr  6 |           | 19  GND
+ *             de  7 |           | 18  GND
+ *         dotclk  8 |           | 17  ldb
+ *            GND  9 |           | 16  chckb
+ *            GND 10 |           | 15  dcrsr
+ *            GND 11 |           | 14  dhs
+ *            GND 12 |           | 13  GND
+ *                    ___________
+ *
+ * Designer: Malcolm North
+ * Date: 2025
+ * Rev: 1.0
+ *********************************************************************/
+
+/* *************** INPUT PINS *********************/
+PIN 1  = chck;      /* Counter (74HC163) output QA - character clock */
+$define clock /chck /* use character clock falling edge */
+
+PIN 2  = phi2;      /* Counter (74HC163) output QB - system clock phase 2 */
+PIN 3  = clk8;      /* Counter (74HC163) output QC */
+PIN 4  = hs;        /* 6845 CRTC horizontal sync output */
+PIN 5  = vs;        /* 6845 CRTC vertical sync output */
+PIN 6  = crsr;      /* 6845 CRTC cursor output */
+PIN 7  = de;        /* 6845 CRTC display enable output */
+pin 8  = dotclk;    /* Crystal oscillator output - video dot clock */
+
+/* *************** OUTPUT PINS ********************/
+pin 14 = dhs;       /* Registered horizontal sync output */
+pin 23 = dvs;       /* Registered vertical sync output */
+PIN 15 = dcrsr;     /* Registered cursor output */
+PIN 22 = dde;       /* Registered display enable output */
+PIN 16 = chckb;     /* Inverted character clock */
+PIN 21 = phi2b;     /* Inverted system clock phase 2 */
+pin 17 = ldb;       /* Shift register load signal (active low) */
+pin 20 = dotclkb;   /* Inverted dot clock */
+
+/* Synchronize 6845 CRTC outputs with character clock falling edge */
+dhs.d = hs;
+dvs.d = vs;
+dcrsr.d = crsr;
+dde.d = de;
+
+/* Generate inverted clock signals */
+chckb = !chck;
+phi2b = !phi2;
+
+/* Generate counter load pulse when QA (chck), QB (phi2), and QC (clk8) are all low */
+ldb = !(!chck & !clk8 & !phi2);
+
+/* Generate inverted dot clock */
+dotclkb = dotclk;
