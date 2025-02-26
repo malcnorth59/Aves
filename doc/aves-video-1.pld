@@ -31,29 +31,34 @@ Device   g22v10;
  * handles cursor display through video signal inversion.
  *
  * ATF22V10C Pinout:
- *                    ___________
- *           chck  1 |           | 24  VCC
- *           phi2  2 |           | 23  dvs
- *           clk8  3 |           | 22  dde
- *             hs  4 |           | 21  phi2b
- *             vs  5 |           | 20  dotclkb
- *           crsr  6 |           | 19  video
- *             de  7 |           | 18  nc
- *         dotclk  8 |           | 17  ldb
- *             nc  9 |           | 16  chckb
- *             nc 10 |           | 15  dcrsr
- *             nc 11 |           | 14  dhs
- *            GND 12 |           | 13  vidout
- *                   |___________|
+ *                  ___________
+ *           chck  | 1       24| VCC
+ *           phi2  | 2       23| dvs
+ *           clk8  | 3       22| dde
+ *             hs  | 4       21| ldcolb
+ *             vs  | 5       20| video
+ *           crsr  | 6       19| nc
+ *             de  | 7       18| cn
+ *         dotclk  | 8       17| ldsrb
+ *             nc  | 9       16| ldchb
+ *             nc  |10       15  dcrsr
+ *             nc  |11       14| dhs
+ *            GND  |12       13| vidout
+ *                 |___________|
+ *
+ * Dotclock  = 16MHz clock to shift register
+ * Clock8    =  8MHz clock from divider
+ * Phi2      =  4MHz CPU clock is 4MHz from divider
+ * Chck      =  2MHz Chracter clock
+ * Ldchb     = Pulse to load character into character latch
+ * Ldsrb     = Pulse to load shift register on next clock rising edge
+ * ldcolb    = Loads colour latch
  *
  * Video Cursor Generation:
  * - vidout is the raw video input signal
  * - dcrsr is the registered cursor signal
  * - video output is XORed with cursor to create inversion effect
  *
- * Designer: Malcolm North
- * Date: 2025
- * Rev: 1.0
  *********************************************************************/
 
 /* *************** INPUT PINS *********************/
@@ -74,11 +79,10 @@ pin 14 = dhs;       /* Registered horizontal sync output */
 pin 23 = dvs;       /* Registered vertical sync output */
 PIN 15 = dcrsr;     /* Registered cursor output */
 PIN 22 = dde;       /* Registered display enable output */
-PIN 16 = chckb;     /* Inverted character clock */
-PIN 21 = phi2b;     /* Inverted system clock phase 2 */
-pin 17 = ldb;       /* Shift register load signal (active low) */
-pin 20 = dotclkb;   /* Inverted dot clock */
-pin 19 = video;     /* Cursor-modified video output */
+PIN 16 = ldchb;     /* Load character register */
+PIN 21 = ldcolb;    /* Inverted system clock phase 2 */
+pin 17 = ldrsb;     /* Shift register load signal (active low) */
+pin 20 = video;     /* Cursor-modified video output */
 
 /* Synchronize 6845 CRTC outputs with character clock falling edge */
 dhs.d = hs;
@@ -86,20 +90,43 @@ dvs.d = vs;
 dcrsr.d = crsr;
 dde.d = de;
 
-/* Generate inverted clock signals */
-chckb = !chck;
-phi2b = !phi2;
+/* low going pulse to load character into Latch on rising edge */
+ldchb = !(!clk8 & !phi2 & chck);       
 
-/* Generate counter load pulse when QA (chck), QB (phi2), and QC (clk8) are all low */
-ldb = !(!chck & !clk8 & !phi2);
+/* low enable pulse qualifies sr load operation */
+ldsrb = !(!dotclk & !clk8 & !phi2 & !chck)
+      # !(dotclk & clk8 & phi2 & chck);
 
-/* Generate inverted dot clock */
-dotclkb = dotclk;
+/* low pulse qualifies load colour latch */
+ldcolb = !(!dotclk & !clk8 & !phi2 & !chck);
 
-/* Video cursor generation - XOR inverts video signal when cursor (dcrsr) is active:
- * vidout dcrsr | video
- *    0     0   |   0    (normal black)
- *    0     1   |   1    (inverted to white)
- *    1     0   |   1    (normal white) 
- *    1     1   |   0    (inverted to black)
- */
+/* Test Vectors for Aves_Memory_Decoder */
+TEST_VECTORS
+([chck,phi2,clk8,hs,vs,crsr,de,dotclk,vidout] -> [dhs,dvs,dcrsr,dde,ldchb,ldcolb,ldsrb,video])
+
+/* Test 1: Reset/idle state - all inputs low */
+[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
+
+/* Test 2: Sync signal registration on clock edge */
+[0,0,0,1,1,0,0,0,0] -> [0,0,0,0,1,1,1,0];
+[1,0,0,1,1,0,0,0,0] -> [1,1,0,0,1,1,1,0];
+
+/* Test 3: Display enable and cursor registration */
+[0,0,0,0,0,1,1,0,0] -> [0,0,0,0,1,1,1,0];
+[1,0,0,0,0,1,1,0,0] -> [0,0,1,1,1,1,1,0];
+
+/* Test 4: Character load timing */
+[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
+[1,0,1,0,0,0,0,0,0] -> [0,0,0,0,0,1,1,0];
+
+/* Test 5: Shift register load timing */
+[0,0,0,0,0,0,0,1,0] -> [0,0,0,0,1,1,1,0];
+[1,1,1,0,0,0,0,1,0] -> [0,0,0,0,1,1,0,0];
+
+/* Test 6: Color load timing */
+[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
+[1,0,0,0,0,0,0,1,1] -> [0,0,0,0,1,0,1,1];
+
+/* Test 7: Video cursor XOR operation */
+[0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,1,1];
+[1,0,0,0,0,1,0,0,1] -> [0,0,1,0,1,1,1,0];
