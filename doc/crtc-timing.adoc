@@ -38,14 +38,14 @@ LDCHB                 |___|
 ----
 00000000111111110   ← char clock
 10000000011111111   ← sh/ld
-            
-Char Clock  ‾‾‾‾‾‾‾‾‾|_________|‾‾‾‾‾‾‾‾
-                     ↓         ↑           
-SH/LD       ‾‾‾‾‾‾‾‾‾‾‾|__________|‾‾‾‾‾
-                               ↑
-                          Load occurs
-                          (rising edge captures data
-                           while SH/LD still low)
+            0_  1_  2_  3_  4_  5_  6_  7_  0_
+Char Clock  | |_| |_| |_| |_| |_| |_| |_| |_|_|   
+            __________________________     ____
+SH/LD                                 |___|
+                                        ↑
+                                    Load occurs
+                                   (rising edge captures data
+                                    while SH/LD still low)
 ----
 --
 [unbreakable]
@@ -72,8 +72,11 @@ B = Shift Load pulse
 /* low going pulse to load character into Latch on rising edge */
 ldchb = !(!clk8 & !phi2 & chck)       
 
-/* low pulse qualifies load colour latch */
-ldcolb = !(!clk8 & !phi2 & !chck)
+/* low pulse loads first colour latch */
+ldcol1b = !(!clk8 & !phi2 & !chck)
+
+/* low pulse loads first colour latch */
+ldcol2b = !(!clk8 & !phi2 &  chck)
 ----
 --
 

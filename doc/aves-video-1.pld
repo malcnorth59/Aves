@@ -51,27 +51,28 @@ Device   g22v10;
  *           phi2 | 2       23| dvs
  *           clk8 | 3       22| dde
  *             hs | 4       21| ldcolb
- *             vs | 5       20| nc   
- *           crsr | 6       19| nc
+ *             vs | 5       20| vidout
+ *           crsr | 6       19| loe2b
  *             de | 7       18| nc
- *             nc | 8       17| video
+ *          vidin | 8       17| loe1b
  *             nc | 9       16| ldchb
  *             nc |10       15  dcrsr
  *             nc |11       14| dhs
- *            GND |12       13| vidout
+ *            GND |12       13| nc
  *                |___________|
  *
  * Clock8    =  8MHz clock from divider
  * Phi2      =  4MHz CPU clock is 4MHz from divider
  * Chck      =  2MHz Chracter clock
  * Ldchb     = Pulse to load character into character latch
- * Ldsrb     = Pulse to load shift register on next clock rising edge
+ * loe1b     = Output enable for first latch (active low, 80 column mode)
+ * loe2b     = Output enable for second latch (active low, 80 column mode)
  * ldcolb    = Loads colour latch
  *
  * Video Cursor Generation:
- * - vidout is the raw video input signal
- * - dcrsr is the registered cursor signal
- * - video output is XORed with cursor to create inversion effect
+ *   vidin is the raw video input signal
+ *   dcrsr is the registered cursor signal
+ *   vidout is XORed with cursor to create inversion effect
  *
   *****************************************************************/
 
@@ -85,17 +86,20 @@ PIN 4  = hs;        /* 6845 CRTC horizontal sync output */
 PIN 5  = vs;        /* 6845 CRTC vertical sync output */
 PIN 6  = crsr;      /* 6845 CRTC cursor output */
 PIN 7  = de;        /* 6845 CRTC display enable output */
+pin 8  = vidin;     /* Video data input */
 pin 9  = mode;      /* 0 = 40 Column, 1 = 80 column */
-pin 13 = vidout;    /* Video data input */
 
 /* *************** OUTPUT PINS ********************/
 pin 14 = dhs;       /* Registered horizontal sync output */
-pin 23 = dvs;       /* Registered vertical sync output */
 PIN 15 = dcrsr;     /* Registered cursor output */
-PIN 22 = dde;       /* Registered display enable output */
 PIN 16 = ldchb;     /* Load character register */
+pin 17 = loe1b;     /* Cursor-modified video output */
+/* */
+PIN 19 = loe2b;    /* Select second latch when chck high */
+PIN 20 = vidout;    /* Select first latch when chck low */
 PIN 21 = ldcolb;    /* Inverted system clock phase 2 */
-pin 17 = video;     /* Cursor-modified video output */
+PIN 22 = dde;       /* Registered display enable output */
+pin 23 = dvs;       /* Registered vertical sync output */
 
 /* Synchronize 6845 CRTC outputs with character clock falling edge */
 dhs.d = hs;
@@ -103,48 +107,43 @@ dvs.d = vs;
 dcrsr.d = crsr;
 dde.d = de;
 
-/* Modified timing equations */
-ldchb = mode & !(!clk8 & !phi2 & chck)      /* 80 col timing */
-      # !mode & !(!phi2 & chck);            /* 40 col timing */
+ldchb = !(mode & clk8 & chck)                  /* 80 col timing */
+      # !(!mode & clk8 & phi2 & chck)          /* 40 col timing */
 
-ldcolb = mode & !(!dotclk & !clk8 & !phi2 & !chck) /* 80 col */
-       # !mode & !(!dotclk & !phi2 & !chck);       /* 40 col */
+ldcolb = !(mode & clk8 & !chck)                /* 80 col */
+       # !(!mode & clk8 & phi2 & !chck)        /* 40 col */
 
-/* Test Vectors for Aves_Memory_Decoder */
+
+/* Add equations */
+loe1b = !(mode & !chck);      /* Active low, select when in 80 col mode and chck low */
+
+loe2b = !(mode & chck);       /* Active low, select when in 80 col mode and chck high */
+
 TEST_VECTORS
-([chck,phi2,clk8,hs,vs,crsr,de,dotclk,mode,vidout] -> [dhs,dvs,dcrsr,dde,ldchb,ldcolb,ldsrb,video])
+([chck,phi2,clk8,hs,vs,crsr,de,mode,vidin] -> [dhs,dvs,dcrsr,dde,ldchb,ldcolb,loe1b,loe2b,vidout])
 
 /* Test 1: Reset/idle state - all inputs low (40 column mode) */
-[0,0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
+[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,0];
 
-/* Test 2: Sync signal registration on clock edge (40 column) */
-[0,0,0,1,1,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
-[1,0,0,1,1,0,0,0,0,0] -> [1,1,0,0,1,1,1,0];
+/* Test 2: 40 column mode timing sequence */
+/* Clock sequence with phi2 low - no pulses */
+[0,0,1,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,0];
+[1,0,1,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,0];
 
-/* Test 3: Display enable and cursor registration (40 column) */
-[0,0,0,0,0,1,1,0,0,0] -> [0,0,0,0,1,1,1,0];
-[1,0,0,0,0,1,1,0,0,0] -> [0,0,1,1,1,1,1,0];
+/* Clock sequence with phi2 high - should pulse */
+[0,1,1,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,0];
+[1,1,1,0,0,0,0,0,0] -> [0,0,0,0,0,1,1,1,0];  /* ldchb pulses */
+[0,1,1,0,0,0,0,0,0] -> [0,0,0,0,1,0,1,1,0];  /* ldcolb pulses */
 
-/* Test 4: Character load timing (40 column) */
-[0,0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
-[1,0,1,0,0,0,0,0,0,0] -> [0,0,0,0,0,1,1,0];
+/* Test 3: 80 column mode timing sequence */
+/* Clock sequence - pulses based just on clk8 & chck */
+[0,0,1,0,0,0,0,1,0] -> [0,0,0,0,1,1,0,1,0];  /* loe1b active */
+[1,0,1,0,0,0,0,1,0] -> [0,0,0,0,0,1,1,0,0];  /* ldchb & loe2b active */
+[0,0,1,0,0,0,0,1,0] -> [0,0,0,0,1,0,0,1,0];  /* ldcolb & loe1b active */
 
-/* Test 5: Shift register load timing (40 column) */
-[0,0,0,0,0,0,0,1,0,0] -> [0,0,0,0,1,1,1,0];
-[1,1,1,0,0,0,0,1,0,0] -> [0,0,0,0,1,1,0,0];
+/* Test 4: Sync and cursor registration */
+[1,0,0,1,1,1,1,0,0] -> [1,1,1,1,1,1,1,1,0];
 
-/* Test 6: Color load timing (40 column) */
-[0,0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,1,1];
-[1,0,0,0,0,0,0,1,0,1] -> [0,0,0,0,1,0,1,1];
-
-/* Test 7: Video cursor XOR operation (40 column) */
-[0,0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,1,1];
-[1,0,0,0,0,1,0,0,0,1] -> [0,0,1,0,1,1,1,0];
-
-/* Test 8: 80 column mode timing tests */
-[0,0,0,0,0,0,0,0,1,0] -> [0,0,0,0,1,1,1,0];
-[1,0,1,0,0,0,0,1,1,0] -> [0,0,0,0,0,1,0,0];
-
-/* Test 9: Mode switching tests */
-[0,0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
-[0,0,0,0,0,0,0,0,1,0] -> [0,0,0,0,1,1,1,0];
+/* Test 5: Video cursor XOR operation */
+[0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,1,1,1];  /* vidin=1, cursor=0 -> vidout=1 */
+[0,0,0,0,0,1,0,0,1] -> [0,0,1,0,1,1,1,1,0];  /* vidin=1, cursor=1 -> vidout=0 */
