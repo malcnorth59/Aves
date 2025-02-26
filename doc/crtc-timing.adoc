@@ -1,5 +1,4 @@
 == CRTC VMAC
-* Dotclock  = 16MHz clock to shift register
 * Clock8    = 8MHz clock from divider
 * Phi2      = 4MHz CPU clock is 4MHz from divider
 * Chck      = 2MHz Chracter clock
@@ -7,30 +6,137 @@
 * Ldsrb     = Pulse to load shift register on next clock rising edge
 * ldcolb    = Loads colour latch
 
+[unbreakable]
+--
+.Control Signal Timing
 [source]
 ----
-Dot Clock:  0101010101010101010101010101010101
+011001100110011001  ← Clock8
+011110000111100001  ← Phi2
+011111111000000001  ← chck
 
-Clock8:     0 110011001100110011001100110011001
-Phi2:       0 111100001111000011110000111100001
-chck:       0 111111110000000011111111000000001
+011111111111111001  ← ldcolb
+111111100111111111  ← ldchb
 
-ldcolb:     0111111111111110011111111111111101
-ldchb:      1111111001111111111111100111111111
-ldsrb:      0011111111111111001111111111111100
+           ___     ___     ___     ___
+Clock8    |   |___|   |___|   |___|   |___|
+           _______         _______
+Phi2      |       |_______|       |_______|
+           _______________                        
+CHCK      |               |_______________|
+           ___________________________
+LDCOLB                                |___|
+           ___________     ________________
+LDCHB                 |___|                          
 ----
+--
 
+[unbreakable]
+--
+.sh/ld Timing
+[source]
+----
+00000000111111110   ← char clock
+10000000011111111   ← sh/ld
+            
+Char Clock  ‾‾‾‾‾‾‾‾‾|_________|‾‾‾‾‾‾‾‾
+                     ↓         ↑           
+SH/LD       ‾‾‾‾‾‾‾‾‾‾‾|__________|‾‾‾‾‾
+                               ↑
+                          Load occurs
+                          (rising edge captures data
+                           while SH/LD still low)
+----
+--
+[unbreakable]
+--
+.sh/ld Generation
+[source]
+----
+  A______________      ___
+    |   ___      |____|   |
+    |__|   |          | + |____B
+    |  | + |__________|   |
+    |__|   |          |___|
+       |___|
+
+A = Character Clock (2MHz)
+B = Shift Load pulse
+----
+--
+
+--
+.WinCUPL Equations
+[unbreakable]
+----
 /* low going pulse to load character into Latch on rising edge */
 ldchb = !(!clk8 & !phi2 & chck)       
 
-/* low enable pulse qualifies sr load operation */
-ldsrb = !(!dotclk & !clk8 & !phi2 & !chck)
-      # !(doclk * clk8 * phi2 * chck)
-
 /* low pulse qualifies load colour latch */
-ldcolb = !(!dotclk & !clk8 & !phi2 & !chck)
+ldcolb = !(!clk8 & !phi2 & !chck)
+----
+--
 
+== Aves Video Controller Timing Analysis
+=== Display Modes
+* 40 Column Mode (320x300)
+** 16MHz dotclock
+** 2MHz character clock
+** 1K character + 1K colour memory
 
+* 80 Column Mode (640x300)
+** 32MHz dotclock
+** 2MHz character clock
+** 2K character + 2K colour memory
 
+=== Clock Selection
+* External hardware jumper selects dotclock frequency
+** 16MHz for 40 column mode
+** 32MHz for 80 column mode
+* Feeds directly to GAL dotclock input (pin 8)
+* Character clock remains constant at 2MHz
 
+=== Internal GAL Timing
+Dotclock is used for:
 
+* Cursor inversion logic
+* Latch enable pulse generation
+* Shift register load timing
+
+==== Timing Analysis
+* 10nS GAL propagation delay is acceptable because:
+** Latch enables occur during stable periods
+** Cursor inversion happens while data is stable
+** Not in critical path for pixel timing
+** All signals synchronized to system clocks
+
+=== Monitor Output
+* SVGA compatible timing
+* Horizontal: 40/80 characters (320/640 pixels)
+* Vertical: 25 characters (300 pixels)
+* Character cell: 8 x 12 pixels
+
+=== Timing Relationships
+
+The shift/load timing is controlled by the dot clock:
+
+----
+00000000111111110   ← dot clock
+10000000011111111   ← sh/ld
+            
+Dot Clock   ‾‾‾‾‾‾‾‾‾|_________|‾‾‾‾‾‾‾‾
+                     ↓         ↑           
+SH/LD       ‾‾‾‾‾‾‾‾‾‾‾|__________|‾‾‾‾‾
+                               ↑
+                          Load occurs
+----
+
+The character and colour loading signals (ldchb and ldcolb) are generated from Clock8, Phi2 and Chck:
+
+[source]
+----
+ldchb = !(!clk8 & !phi2 & chck)       
+ldcolb = !(!clk8 & !phi2 & !chck)
+----
+
+These signals coordinate the loading of character and colour data during the sh/ld pulse window shown above.

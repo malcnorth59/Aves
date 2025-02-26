@@ -12,41 +12,55 @@ Device   g22v10;
  * Aves Video Timing Controller
  * 
  * This PLD provides timing logic for a 6845 CRTC based video system:
+ * 
+ * Basic Model (40 Column):
  * - 40 x 25 character text display (320 x 300 pixels)
+ * - 2K x 8 dual port RAM screen buffer
+ *   * 1K for character codes
+ *   * 1K for color attributes (4-bit FG, 4-bit BG)
+ * - Fixed 2MHz character clock timing
+ *
+ * Advanced Model (80 Column):
+ * - Switchable 40/80 x 25 character display
+ * - 4K x 8 dual port RAM screen buffer
+ *   * 2K for character codes
+ *   * 2K for color attributes (4-bit FG, 4-bit BG)
+ * - Switchable 2MHz/4MHz timing
+ *
+ * Common Specifications:
  * - 8 x 12 pixel character cell font
  * - 16 color output capability
- * - 2K x 8 dual port RAM screen buffer
  * - 65C02 CPU interface
  * - Video cursor generation through signal inversion
  *
  * Video Output Specifications:
- * - Based on SVGA timing standards at reduced clock rate
- * - Dot clock: 16 MHz
- * - Horizontal: 40 characters (320 pixels)
+ * - SVGA compatible timing
+ * - Dot clock: 32 MHz (31.25nS period)
+ * - Horizontal: 40/80 characters (320/640 pixels)
  * - Vertical: 25 characters (300 pixels)
- *
- * The device synchronizes 6845 CRTC outputs with the system clocks,
- * generates required timing signals for the dual port RAM access,
- * provides clock management for the video subsystem, and
- * handles cursor display through video signal inversion.
+ * - Character cell: 8 x 12 pixels
+ * - Active display area: 
+ *   * 40 column: 320 x 300 pixels
+ *   * 80 column: 640 x 300 pixels
+ * - Horizontal sync: SVGA compatible
+ * - Vertical sync: SVGA compatible
  *
  * ATF22V10C Pinout:
- *                  ___________
- *           chck  | 1       24| VCC
- *           phi2  | 2       23| dvs
- *           clk8  | 3       22| dde
- *             hs  | 4       21| ldcolb
- *             vs  | 5       20| video
- *           crsr  | 6       19| nc
- *             de  | 7       18| cn
- *         dotclk  | 8       17| ldsrb
- *             nc  | 9       16| ldchb
- *             nc  |10       15  dcrsr
- *             nc  |11       14| dhs
- *            GND  |12       13| vidout
- *                 |___________|
+ *                 ___________
+ *           chck | 1       24| VCC
+ *           phi2 | 2       23| dvs
+ *           clk8 | 3       22| dde
+ *             hs | 4       21| ldcolb
+ *             vs | 5       20| nc   
+ *           crsr | 6       19| nc
+ *             de | 7       18| nc
+ *             nc | 8       17| video
+ *             nc | 9       16| ldchb
+ *             nc |10       15  dcrsr
+ *             nc |11       14| dhs
+ *            GND |12       13| vidout
+ *                |___________|
  *
- * Dotclock  = 16MHz clock to shift register
  * Clock8    =  8MHz clock from divider
  * Phi2      =  4MHz CPU clock is 4MHz from divider
  * Chck      =  2MHz Chracter clock
@@ -59,7 +73,7 @@ Device   g22v10;
  * - dcrsr is the registered cursor signal
  * - video output is XORed with cursor to create inversion effect
  *
- *********************************************************************/
+  *****************************************************************/
 
 /* *************** INPUT PINS *********************/
 PIN 1  = chck;      /* Counter (74HC163) output QA - character clock */
@@ -71,7 +85,7 @@ PIN 4  = hs;        /* 6845 CRTC horizontal sync output */
 PIN 5  = vs;        /* 6845 CRTC vertical sync output */
 PIN 6  = crsr;      /* 6845 CRTC cursor output */
 PIN 7  = de;        /* 6845 CRTC display enable output */
-pin 8  = dotclk;    /* Crystal oscillator output - video dot clock */
+pin 9  = mode;      /* 0 = 40 Column, 1 = 80 column */
 pin 13 = vidout;    /* Video data input */
 
 /* *************** OUTPUT PINS ********************/
@@ -81,8 +95,7 @@ PIN 15 = dcrsr;     /* Registered cursor output */
 PIN 22 = dde;       /* Registered display enable output */
 PIN 16 = ldchb;     /* Load character register */
 PIN 21 = ldcolb;    /* Inverted system clock phase 2 */
-pin 17 = ldrsb;     /* Shift register load signal (active low) */
-pin 20 = video;     /* Cursor-modified video output */
+pin 17 = video;     /* Cursor-modified video output */
 
 /* Synchronize 6845 CRTC outputs with character clock falling edge */
 dhs.d = hs;
@@ -90,43 +103,48 @@ dvs.d = vs;
 dcrsr.d = crsr;
 dde.d = de;
 
-/* low going pulse to load character into Latch on rising edge */
-ldchb = !(!clk8 & !phi2 & chck);       
+/* Modified timing equations */
+ldchb = mode & !(!clk8 & !phi2 & chck)      /* 80 col timing */
+      # !mode & !(!phi2 & chck);            /* 40 col timing */
 
-/* low enable pulse qualifies sr load operation */
-ldsrb = !(!dotclk & !clk8 & !phi2 & !chck)
-      # !(dotclk & clk8 & phi2 & chck);
-
-/* low pulse qualifies load colour latch */
-ldcolb = !(!dotclk & !clk8 & !phi2 & !chck);
+ldcolb = mode & !(!dotclk & !clk8 & !phi2 & !chck) /* 80 col */
+       # !mode & !(!dotclk & !phi2 & !chck);       /* 40 col */
 
 /* Test Vectors for Aves_Memory_Decoder */
 TEST_VECTORS
-([chck,phi2,clk8,hs,vs,crsr,de,dotclk,vidout] -> [dhs,dvs,dcrsr,dde,ldchb,ldcolb,ldsrb,video])
+([chck,phi2,clk8,hs,vs,crsr,de,dotclk,mode,vidout] -> [dhs,dvs,dcrsr,dde,ldchb,ldcolb,ldsrb,video])
 
-/* Test 1: Reset/idle state - all inputs low */
-[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
+/* Test 1: Reset/idle state - all inputs low (40 column mode) */
+[0,0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
 
-/* Test 2: Sync signal registration on clock edge */
-[0,0,0,1,1,0,0,0,0] -> [0,0,0,0,1,1,1,0];
-[1,0,0,1,1,0,0,0,0] -> [1,1,0,0,1,1,1,0];
+/* Test 2: Sync signal registration on clock edge (40 column) */
+[0,0,0,1,1,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
+[1,0,0,1,1,0,0,0,0,0] -> [1,1,0,0,1,1,1,0];
 
-/* Test 3: Display enable and cursor registration */
-[0,0,0,0,0,1,1,0,0] -> [0,0,0,0,1,1,1,0];
-[1,0,0,0,0,1,1,0,0] -> [0,0,1,1,1,1,1,0];
+/* Test 3: Display enable and cursor registration (40 column) */
+[0,0,0,0,0,1,1,0,0,0] -> [0,0,0,0,1,1,1,0];
+[1,0,0,0,0,1,1,0,0,0] -> [0,0,1,1,1,1,1,0];
 
-/* Test 4: Character load timing */
-[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
-[1,0,1,0,0,0,0,0,0] -> [0,0,0,0,0,1,1,0];
+/* Test 4: Character load timing (40 column) */
+[0,0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
+[1,0,1,0,0,0,0,0,0,0] -> [0,0,0,0,0,1,1,0];
 
-/* Test 5: Shift register load timing */
-[0,0,0,0,0,0,0,1,0] -> [0,0,0,0,1,1,1,0];
-[1,1,1,0,0,0,0,1,0] -> [0,0,0,0,1,1,0,0];
+/* Test 5: Shift register load timing (40 column) */
+[0,0,0,0,0,0,0,1,0,0] -> [0,0,0,0,1,1,1,0];
+[1,1,1,0,0,0,0,1,0,0] -> [0,0,0,0,1,1,0,0];
 
-/* Test 6: Color load timing */
-[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
-[1,0,0,0,0,0,0,1,1] -> [0,0,0,0,1,0,1,1];
+/* Test 6: Color load timing (40 column) */
+[0,0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,1,1];
+[1,0,0,0,0,0,0,1,0,1] -> [0,0,0,0,1,0,1,1];
 
-/* Test 7: Video cursor XOR operation */
-[0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,1,1];
-[1,0,0,0,0,1,0,0,1] -> [0,0,1,0,1,1,1,0];
+/* Test 7: Video cursor XOR operation (40 column) */
+[0,0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,1,1];
+[1,0,0,0,0,1,0,0,0,1] -> [0,0,1,0,1,1,1,0];
+
+/* Test 8: 80 column mode timing tests */
+[0,0,0,0,0,0,0,0,1,0] -> [0,0,0,0,1,1,1,0];
+[1,0,1,0,0,0,0,1,1,0] -> [0,0,0,0,0,1,0,0];
+
+/* Test 9: Mode switching tests */
+[0,0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,0];
+[0,0,0,0,0,0,0,0,1,0] -> [0,0,0,0,1,1,1,0];
