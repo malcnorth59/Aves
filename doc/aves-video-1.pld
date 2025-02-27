@@ -53,7 +53,7 @@ Device   g22v10;
  *             hs | 4       21| ldcolb
  *             vs | 5       20| vidout
  *           crsr | 6       19| loe2b
- *             de | 7       18| nc
+ *             de | 7       18| dispb
  *          vidin | 8       17| loe1b
  *             nc | 9       16| ldchb
  *             nc |10       15  dcrsr
@@ -94,8 +94,8 @@ pin 14 = dhs;       /* Registered horizontal sync output */
 PIN 15 = dcrsr;     /* Registered cursor output */
 PIN 16 = ldchb;     /* Load character register */
 pin 17 = loe1b;     /* Cursor-modified video output */
-/* */
-PIN 19 = loe2b;    /* Select second latch when chck high */
+pin 18 = dispb;     /* Display Buffer select */
+PIN 19 = loe2b;     /* Select second latch when chck high */
 PIN 20 = vidout;    /* Select first latch when chck low */
 PIN 21 = ldcolb;    /* Inverted system clock phase 2 */
 PIN 22 = dde;       /* Registered display enable output */
@@ -106,44 +106,55 @@ dhs.d = hs;
 dvs.d = vs;
 dcrsr.d = crsr;
 dde.d = de;
+/* 0123456701234567
+-------------------------------
+ * 0101010101010101    <- clk8
+ * 0110011001100110    <- phi2
+ * 0111100001111000    <- chck
+ * 0000000011111111    <- mode
+ *
+ * 1011111110101111    <- ldb
+ * 1110111101011111    <- ldcolb
+ *
+ */
+/* Character loads during first half of phi2 */
+ldchb = !( mode &  clk8 & !phi2 & chck)     /* 80 col char (slot 1) */
+      # !(!mode & !clk8 & !phi2 & chck);    /* 40 col char (slot 0) */
 
-ldchb = !(mode & clk8 & chck)                  /* 80 col timing */
-      # !(!mode & clk8 & phi2 & chck)          /* 40 col timing */
+/* Color loads during second half of phi2 */
+ldcolb = !( mode &  clk8 &  phi2 & chck)    /* 80 col color (slot 3) */
+       # !(!mode & !clk8 &  phi2 & chck);   /* 40 col color (slot 2) */
 
-ldcolb = !(mode & clk8 & !chck)                /* 80 col */
-       # !(!mode & clk8 & phi2 & !chck)        /* 40 col */
+/* Latch output enables for 80-column mode */
+loe1b = !(mode & !chck);    /* First latch when chck low */
+loe2b = !(mode & chck);     /* Second latch when chck high */
 
+/* Display buffer select for CRTC reading into latches */
+dispb = !chck
 
-/* Add equations */
-loe1b = !(mode & !chck);      /* Active low, select when in 80 col mode and chck low */
-
-loe2b = !(mode & chck);       /* Active low, select when in 80 col mode and chck high */
-
-TEST_VECTORS
-([chck,phi2,clk8,hs,vs,crsr,de,mode,vidin] -> [dhs,dvs,dcrsr,dde,ldchb,ldcolb,loe1b,loe2b,vidout])
+/* Test vectors for Aves Video Timing Controller */
+/* Format: [chck,phi2,clk8,hs,vs,crsr,de,vidin,mode] -> [dhs,dvs,dcrsr,dde,ldchb,ldcolb,loe1b,loe2b,dispb] */
 
 /* Test 1: Reset/idle state - all inputs low (40 column mode) */
-[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,0];
+[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,1];
 
-/* Test 2: 40 column mode timing sequence */
-/* Clock sequence with phi2 low - no pulses */
-[0,0,1,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,0];
-[1,0,1,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,0];
+/* Test 2: 40 column mode character timing */
+[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,1];  /* chck low - inactive */
+[1,0,0,0,0,0,0,0,0] -> [0,0,0,0,0,1,1,1,0];  /* chck high, phi2 low - load char */
+[1,1,0,0,0,0,0,0,0] -> [0,0,0,0,1,0,1,1,0];  /* chck high, phi2 high - load color */
 
-/* Clock sequence with phi2 high - should pulse */
-[0,1,1,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,0];
-[1,1,1,0,0,0,0,0,0] -> [0,0,0,0,0,1,1,1,0];  /* ldchb pulses */
-[0,1,1,0,0,0,0,0,0] -> [0,0,0,0,1,0,1,1,0];  /* ldcolb pulses */
-
-/* Test 3: 80 column mode timing sequence */
-/* Clock sequence - pulses based just on clk8 & chck */
-[0,0,1,0,0,0,0,1,0] -> [0,0,0,0,1,1,0,1,0];  /* loe1b active */
-[1,0,1,0,0,0,0,1,0] -> [0,0,0,0,0,1,1,0,0];  /* ldchb & loe2b active */
-[0,0,1,0,0,0,0,1,0] -> [0,0,0,0,1,0,0,1,0];  /* ldcolb & loe1b active */
+/* Test 3: 80 column mode timing */
+[0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,0,1,1];  /* chck low - loe1b active */
+[1,0,1,0,0,0,0,0,1] -> [0,0,0,0,0,1,1,0,0];  /* chck high, phi2 low, clk8 high - load char */
+[1,1,1,0,0,0,0,0,1] -> [0,0,0,0,1,0,1,0,0];  /* chck high, phi2 high, clk8 high - load color */
 
 /* Test 4: Sync and cursor registration */
-[1,0,0,1,1,1,1,0,0] -> [1,1,1,1,1,1,1,1,0];
+[1,0,0,1,1,1,1,0,0] -> [1,1,1,1,1,1,1,1,0];  /* Register sync signals */
 
 /* Test 5: Video cursor XOR operation */
-[0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,1,1,1];  /* vidin=1, cursor=0 -> vidout=1 */
-[0,0,0,0,0,1,0,0,1] -> [0,0,1,0,1,1,1,1,0];  /* vidin=1, cursor=1 -> vidout=0 */
+[0,0,0,0,0,0,0,1,0] -> [0,0,0,0,1,1,1,1,1];  /* vidin=1, cursor=0 -> vidout=1 */
+[1,0,0,0,0,1,0,1,0] -> [0,0,1,0,1,1,1,1,0];  /* vidin=1, cursor=1 -> vidout=0 */
+
+/* Test 6: 40/80 column mode switching */
+[0,0,0,0,0,0,0,0,0] -> [0,0,0,0,1,1,1,1,1];  /* 40 column mode */
+[0,0,0,0,0,0,0,0,1] -> [0,0,0,0,1,1,0,1,1];  /* 80 column mode */
