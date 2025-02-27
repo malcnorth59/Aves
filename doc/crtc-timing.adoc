@@ -65,6 +65,36 @@ B = Shift Load pulse
 ----
 --
 
+Red Bit ----[510]----+
+                     |
+                    [1k]
+                     |
+Red I Bit ---[510]--+
+                     |
+                    [1k]
+                     |
+                     +--------+
+                              |
+Green Bit ---[510]--+         |
+                     |        |
+                  [1k]        |
+                     |        |   
+Green I Bit -[510]--+         |  
+                     |        | Ladders terminate here   
+                    [1k]      |    |
+                     |        |    v
+                     +--------+----+----[75]---->
+                              |    |
+Blue Bit ----[510]--+         |  [150]
+                     |        |    |
+                    [1k]      |   GND
+                     |        |
+Blue I Bit --[510]--+         |
+                     |        |
+                    [1k]      |
+                     |        |
+                     +--------+
+
 --
 .WinCUPL Equations
 [unbreakable]
