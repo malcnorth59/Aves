@@ -1,0 +1,23 @@
+= ASB Protocol Design Notes
+
+== Foundational Influences
+Garth Wilson's work has influenced multiple aspects of Aves:
+
+=== Physical Layer Solutions
+* VIA shift register timing fixes
+* I2C implementation principles 
+* SPI interface design patterns
+
+=== Interrupt Handling
+* His high-level Forth interrupt approach influencing Kingfisher
+* Clean separation of hardware and software concerns
+* Efficient interrupt processing
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,30 @@
+== FLAP Data-Link Protocol
+
+=== IEEE488 Command Structure
+* LISTEN (0x20 + device) - Assigns device as data receiver
+* TALK (0x40 + device) - Assigns device as data transmitter
+* UNLISTEN (0x3F) - Releases all devices from listen mode
+* UNTALK (0x5F) - Releases current talker
+
+=== Connection Management
+==== Establishing Connection
+1. Controller sends LISTEN command to target device(s)
+2. Controller sends TALK command to source device
+3. Data transfer can begin
+
+==== Terminating Connection
+1. Controller sends UNLISTEN to release listeners
+2. Controller sends UNTALK to release talker
+3. Bus returns to idle state
+
+=== Device Addressing
+* Device addresses: 0-14 (4 bits)
+* Address 15 reserved
+* Commands: Upper 2 bits define command type
+* Lower 4 bits contain device address
+
+=== Protocol Features
+* Clear command structure
+* Deterministic bus control
+* Multiple listener support
+* Single talker at a time

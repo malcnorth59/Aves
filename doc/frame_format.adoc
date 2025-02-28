@@ -1,0 +1,32 @@
+=== Frame Format
+
+==== Structure
+* Command byte (1 byte)
+* Length byte (1 byte, 0-255)
+* Data payload (length bytes)
+* CRC-16 (2 bytes, present if length > 0)
+  - Covers all preceding bytes (command, length, and payload)
+  - Always placed at end of frame
+  - Omitted for zero-length frames
+
+==== Frame Types
+
+===== Command Frame (length = 0)
+* Command byte
+* Length = 0
+* No payload
+* No CRC
+
+===== Data Frame (length > 0)
+* Command byte
+* Length byte (1-255)
+* Data payload (length bytes)
+* CRC-16 covering all preceding bytes
+
+==== CRC-16 Specification
+* Polynomial: 0x8408 (reversed 0x1021)
+* Initial value: 0xFFFF
+* Final XOR: 0xFFFF
+* Right-shifting implementation
+* Calculated over all frame bytes before CRC
+
