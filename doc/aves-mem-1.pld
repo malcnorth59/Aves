@@ -13,15 +13,15 @@ Device   g22v10;
             _____    ____
            /     \__/    \
       vacc |1          24| Vcc
-      phi2 |2          23| ram_en
-       r_w |3          22| !wr
-        a8 |4          21| !ram_1
+      phi2 |2          23| ramen
+       r_w |3          22| wrb
+        a8 |4          21| e1
         a9 |5          20| ma15
-       a10 |6          19| NC
-       a11 |7          18| NC
-       a12 |8          17| NC
-       a13 |9          16| !ram_2
-       a14 |10         15| !rom
+       a10 |6          19| ram1b
+       a11 |7          18| ram2b
+       a12 |8          17| romb
+       a13 |9          16| e
+       a14 |10         15| rdb
        a15 |11         14| ie0
        GND |12         13| io
            \_____________/
@@ -40,23 +40,22 @@ Inputs:
   11 - a15       : Address bit 15
   13 - io        : I/O select (active high)
   14 - ie0       : ROM page select
+  15 - e1        : ready signal delayed by 1 clock
   23 - vacc      : Video access (active high)
 
+
 Outputs:
-  15 - !rom      : ROM chip select
-  16 - !ram_2    : Upper RAM select
-  20 - ma15      : ROM bank address
-  21 - !ram_1    : Lower RAM select
-  22 - !wr       : Write enable
+  16 - e         : E output for 1MHz 6845
+  17 - romb      : ROM chip select - active low
+  18 - ram2b     : RAM2 chip select - active low
+  19 - ram1b     : RAM1 chip select - active low
+  20 - ma15      : EPROM expanded bank address
+  21 - rdb       : memory read strobe - active low
+  22 - wrb       : memory write strobe - active low
 
 Power:
   12 - GND       : Ground
   24 - Vcc       : +5V
-
-Not Connected:
-  17 - NC
-  18 - NC
-  19 - NC
 
   +------+------+------+------+------+------+------+------+
   |Bit 7 |Bit 6 |Bit 5 |Bit 4 |Bit 3 |Bit 2 |Bit 1 |Bit 0 |
