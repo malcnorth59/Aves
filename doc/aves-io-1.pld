@@ -13,10 +13,10 @@ Device   G22V10;
  *                /     \_/     \
  *           vacc | 1         24| VCC
  *           phi2 | 2         23| a6
- *            r_w | 3         22| wait
+ *            r_w | 3         22| rdy
  *             a8 | 4         21| mcrb
  *             a9 | 5         20| vicb
- *            a10 | 6         19| rdy
+ *            a10 | 6         19| waitb
  *            a11 | 7         18| dpmb
  *            a12 | 8         17| viab
  *            a13 | 9         16| xiob
@@ -48,45 +48,23 @@ Device   G22V10;
  *   phi2  - active high
  *   r_w   - low=write
  *   io    - active high
- *   wait  - active high
+ *   rdy   - active high
+ *
  * Outputs:
  *   All chip selects (mcrb,vicb,viab,xiob,kbdb) - active low
- *   rdy   - active low
+ *   waitb - active low
  *   dpmb  - active low
  */
 
- /* Timing Requirements:
-  * The wait signal is generated through an external 4-stage shift register
-  * triggered by the rdy signal. For slow device accesses (VIC and I/O 
-  * expansion slow page):
-  *
-  * 1. Initial access triggers rdy low
-  * 2. After 4 cycles, wait goes low
-  * 3. wait remains low until shift register clears (4 more cycles)
-  * 4. Next slow access must not occur until wait returns high
-  *
-  * WARNING: If a slow access occurs while wait is still low, it will
-  * execute as a fast cycle without proper timing. Software must ensure
-  * at least 4 cycles of fast access between any two slow accesses.
-  * 
-  * Example sequence:
-  * Cycle 0: Slow access starts (rdy low)
-  * Cycle 1-3: Wait states
-  * Cycle 4: wait goes low, access completes
-  * Cycle 5-8: Must be fast accesses to allow shift register to clear
-  * Cycle 9: Next slow access can begin safely
-  */
- 
-
 /* Pin Declarations - All outputs active low */
-Pin 1  = vacc;    /* Video access control (active high) */
-Pin 2  = phi2;    /* System clock phase 2 (active high) */
-Pin 3  = r_w;     /* Read/Write control (low=write) */
-Pin 13 = io;      /* I/O select (active high) */
-Pin 22 = wait;   /* Wait state input (active low) */
+Pin 1  = vacc;      /* Video access control (active high) */
+Pin 2  = phi2;      /* System clock phase 2 (active high) */
+Pin 3  = r_w;       /* Read/Write control (low=write) */
+Pin 13 = io;        /* I/O select (active high) */
+Pin 22 = rdy;       /* Ready signal from shift register q3 */
 
 /* Address bus */
-Pin 23 = a6;      /* Address lines 6-15 */
+Pin 23 = a6;        /* Address lines 6-15 */
 Pin 14 = a7;
 Pin 4  = a8;
 Pin 5  = a9;
@@ -100,7 +78,7 @@ Pin 11 = a15;
 /* Output Pins - All active low */
 Pin 21 = mcrb;    /* Memory Control Register select */
 Pin 20 = vicb;    /* VIC chip select */
-Pin 19 = rdy;     /* Ready signal */
+Pin 19 = waitb;   /* Wait request signal */
 Pin 18 = dpmb;    /* Dual Port Memory select */
 Pin 17 = viab;    /* VIA chip select */
 Pin 16 = xiob;    /* I/O expansion select */
@@ -114,16 +92,20 @@ io_hole_1 = !vacc & a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8;    /* 0xFE00-0
 io_hole_2 = !vacc & io & a15 & a14 & a13 & a12 & a11 & a10 & !a9;    /* 0xFC00-0xFDFF */
 dpm_hole  = !vacc & io & a15 & !a14 & !a13 & !a12;                   /* 0x8000-0x8FFF */
 
+vic_slot        = io_hole_1 & !a7 & a6
+
+xio_fast_slot   = io_hole_2 & !a8 
+
+xio_slow_slot   = io_hole_2 & a8
+
 /* Output equations */
-mcrb  = !(phi2 & io_hole_1 & a7 & a6);        /* 0xFEC0-0xFEFF */
-kbdb  = !(phi2 & io_hole_1 & !a7 & !a6);      /* 0xFE00-0xFE3F */
-vicb  = !(io_hole_1 & !a7 & a6 & wait);       /* 0xFE40-0xFE7F */
-viab  = !(io_hole_1 & a7 & !a6);              /* 0xFE80-0xFEBF */
-xiob  = !(io_hole_2 & !a8
-      # (a8 & wait));                         /* 0xFC00-0xFDFF */
-dpmb  = !dpm_hole;                            /* 0x8000-0x8FFF */
-rdy   = !((io_hole_1 & !a7 & a6 wait) #       /* VIC access */
-          (io_hole_2 & a8 & wait));           /* Slow I/O page */
+mcrb  = !(phi2 & io_hole_1 & a7 & a6);              /* 0xFEC0-0xFEFF */
+kbdb  = !(phi2 & io_hole_1 & !a7 & !a6);            /* 0xFE00-0xFE3F */
+vicb  = !(vic_slot & rdy);                          /* 0xFE40-0xFE7F */
+viab  = !(io_hole_1 & a7 & !a6);                    /* 0xFE80-0xFEBF */
+xiob  = !(xio_fast_slot & xio_slow_slot & rdy);     /* 0xFC00-0xFDFF */
+dpmb  = !dpm_hole;                                  /* 0x8000-0x8FFF */
+waitb = vic_slot & xio_slow_slot;                   /* Slow I/O page */
 
 /* Test Vectors */
 TEST_VECTORS ([vacc phi2 r_w io wait a15 a14 a13 a12 a11 a10 a9 a8 a7 a6] => 
