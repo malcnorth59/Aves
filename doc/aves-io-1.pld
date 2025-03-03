@@ -9,20 +9,21 @@ Location None;
 Device   G22V10;
 
 /* *************** INPUT PINS ********************
- *                  ______ ______
- *           vacc =| 1    U    24|= VCC
- *           phi2 =| 2         23|= a6
- *            r_w =| 3         22|= waitb
- *             a8 =| 4         21|= mcrb
- *             a9 =| 5         20|= vicb
- *            a10 =| 6         19|= rdy
- *            a11 =| 7         18|= dpmb
- *            a12 =| 8         17|= viab
- *            a13 =| 9         16|= xiob
- *            a14 =|10         15|= kbdb
- *            a15 =|11         14|= a7
- *            GND =|12         13|= io
- *                  -------------
+ *                 _____   _____
+ *                /     \_/     \
+ *           vacc | 1         24| VCC
+ *           phi2 | 2         23| a6
+ *            r_w | 3         22| wait
+ *             a8 | 4         21| mcrb
+ *             a9 | 5         20| vicb
+ *            a10 | 6         19| rdy
+ *            a11 | 7         18| dpmb
+ *            a12 | 8         17| viab
+ *            a13 | 9         16| xiob
+ *            a14 |10         15| kbdb
+ *            a15 |11         14| a7
+ *            GND |12         13| io
+ *                \_____________/
  *
  * Note: Pin 24 (VCC) and Pin 12 (GND) are not
  *       declared in pin list
@@ -45,21 +46,44 @@ Device   G22V10;
  * Inputs:
  *   vacc  - active high
  *   phi2  - active high
- *   r_w   - active low (low=write)
+ *   r_w   - low=write
  *   io    - active high
- *   waitb - active low
+ *   wait  - active high
  * Outputs:
  *   All chip selects (mcrb,vicb,viab,xiob,kbdb) - active low
  *   rdy   - active low
  *   dpmb  - active low
  */
 
+ /* Timing Requirements:
+  * The wait signal is generated through an external 4-stage shift register
+  * triggered by the rdy signal. For slow device accesses (VIC and I/O 
+  * expansion slow page):
+  *
+  * 1. Initial access triggers rdy low
+  * 2. After 4 cycles, wait goes low
+  * 3. wait remains low until shift register clears (4 more cycles)
+  * 4. Next slow access must not occur until wait returns high
+  *
+  * WARNING: If a slow access occurs while wait is still low, it will
+  * execute as a fast cycle without proper timing. Software must ensure
+  * at least 4 cycles of fast access between any two slow accesses.
+  * 
+  * Example sequence:
+  * Cycle 0: Slow access starts (rdy low)
+  * Cycle 1-3: Wait states
+  * Cycle 4: wait goes low, access completes
+  * Cycle 5-8: Must be fast accesses to allow shift register to clear
+  * Cycle 9: Next slow access can begin safely
+  */
+ 
+
 /* Pin Declarations - All outputs active low */
 Pin 1  = vacc;    /* Video access control (active high) */
 Pin 2  = phi2;    /* System clock phase 2 (active high) */
 Pin 3  = r_w;     /* Read/Write control (low=write) */
 Pin 13 = io;      /* I/O select (active high) */
-Pin 22 = waitb;   /* Wait state input (active low) */
+Pin 22 = wait;   /* Wait state input (active low) */
 
 /* Address bus */
 Pin 23 = a6;      /* Address lines 6-15 */
@@ -93,15 +117,16 @@ dpm_hole  = !vacc & io & a15 & !a14 & !a13 & !a12;                   /* 0x8000-0
 /* Output equations */
 mcrb  = !(phi2 & io_hole_1 & a7 & a6);        /* 0xFEC0-0xFEFF */
 kbdb  = !(phi2 & io_hole_1 & !a7 & !a6);      /* 0xFE00-0xFE3F */
-vicb  = !(io_hole_1 & !a7 & a6 & !waitb);     /* 0xFE40-0xFE7F */
+vicb  = !(io_hole_1 & !a7 & a6 & wait);       /* 0xFE40-0xFE7F */
 viab  = !(io_hole_1 & a7 & !a6);              /* 0xFE80-0xFEBF */
-xiob  = !(io_hole_2 & (!a8 # (a8 & !waitb))); /* 0xFC00-0xFDFF */
+xiob  = !(io_hole_2 & !a8
+      # (a8 & wait));                         /* 0xFC00-0xFDFF */
 dpmb  = !dpm_hole;                            /* 0x8000-0x8FFF */
-rdy   = !((io_hole_1 & !a7 & a6) #            /* VIC access */
-          (io_hole_2 & a8));                  /* Slow I/O page */
+rdy   = !((io_hole_1 & !a7 & a6 wait) #       /* VIC access */
+          (io_hole_2 & a8 & wait));           /* Slow I/O page */
 
 /* Test Vectors */
-TEST_VECTORS ([vacc phi2 r_w io waitb a15 a14 a13 a12 a11 a10 a9 a8 a7 a6] => 
+TEST_VECTORS ([vacc phi2 r_w io wait a15 a14 a13 a12 a11 a10 a9 a8 a7 a6] => 
               [mcrb vicb rdy dpmb viab xiob kbdb])
 
 /* Fixed I/O Tests */
@@ -110,7 +135,7 @@ TEST_VECTORS ([vacc phi2 r_w io waitb a15 a14 a13 a12 a11 a10 a9 a8 a7 a6] =>
 [0 0 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 1 1 1 1 1] /* KBD phi2=0 */
 
 [0 1 1 1 1 1 1 1 1 1 1 1 0 0 1] => [1 0 0 1 1 1 1] /* VIC read */
-[0 1 1 1 0 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* VIC waitb=0 */
+[0 1 1 1 0 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* VIC wait=0 */
 
 [0 1 1 1 1 1 1 1 1 1 1 1 0 1 0] => [1 1 1 1 0 1 1] /* VIA access */
 [0 1 1 1 1 1 1 1 1 1 1 1 0 1 1] => [0 1 1 1 1 1 1] /* MCR access */
@@ -126,8 +151,19 @@ TEST_VECTORS ([vacc phi2 r_w io waitb a15 a14 a13 a12 a11 a10 a9 a8 a7 a6] =>
 /* Control Signal Tests */
 [1 1 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 1 1 1 1 1] /* VACC override */
 [0 0 1 1 1 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* Clock inactive */
-[0 1 1 1 0 1 1 1 1 1 1 0 1 0 0] => [1 1 1 1 1 1 1] /* Wait state */
+[0 1 1 1 0 1 1 1 1 1 1 0 1 0 0] => [1 1 1 1 1 1 1] /* wait state */
 
 /* Boundary Tests */
 [0 1 1 1 1 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 1 1 1] /* RAM space */
 [0 1 1 1 1 1 1 1 1 1 1 1 1 1 1] => [1 1 1 1 1 1 1] /* ROM space */
+
+/* Two consecutive VIC accesses with 4-cycle shift register */
+[0 1 1 1 1 1 1 1 1 1 1 1 0 0 1] => [1 0 0 1 1 1 1] /* First VIC access starts */
+[0 1 1 1 0 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* wait goes low after 4 cycles */
+[0 1 1 1 0 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* Second VIC access - proceeds fast */
+[0 1 1 1 0 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* Still proceeds fast */
+[0 1 1 1 0 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* Still proceeds fast */
+[0 1 1 1 0 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* Last cycle with wait low */
+
+/* After shift register clears */
+[0 1 1 1 1 1 1 1 1 1 1 1 0 0 1] => [1 0 0 1 1 1 1] /* New VIC access can now wait */

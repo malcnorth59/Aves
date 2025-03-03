@@ -21,13 +21,13 @@ Device   g22v10;
        a11 |7          18| ram2b
        a12 |8          17| romb
        a13 |9          16| e
-       a14 |10         15| rdb
+       a14 |10         15| rdy
        a15 |11         14| ie0
        GND |12         13| io
            \_____________/
 
 Inputs:
-  1  - ram_en    : RAM enable (active high)
+  1  - ramen     : RAM enable (active high)
   2  - phi2      : System clock phase 2
   3  - r_w       : Read/Write (low = write)
   4  - a8        : Address bit 8
@@ -40,9 +40,9 @@ Inputs:
   11 - a15       : Address bit 15
   13 - io        : I/O select (active high)
   14 - ie0       : ROM page select
-  15 - e1        : ready signal delayed by 1 clock
+  15 - rdy       : Ready signal
+  22 - e1        : ready signal delayed by 1 clock
   23 - vacc      : Video access (active high)
-
 
 Outputs:
   16 - e         : E output for 1MHz 6845
@@ -50,8 +50,7 @@ Outputs:
   18 - ram2b     : RAM2 chip select - active low
   19 - ram1b     : RAM1 chip select - active low
   20 - ma15      : EPROM expanded bank address
-  21 - rdb       : memory read strobe - active low
-  22 - wrb       : memory write strobe - active low
+  21 - wrb       : memory write strobe - active low
 
 Power:
   12 - GND       : Ground
@@ -60,9 +59,18 @@ Power:
   +------+------+------+------+------+------+------+------+
   |Bit 7 |Bit 6 |Bit 5 |Bit 4 |Bit 3 |Bit 2 |Bit 1 |Bit 0 |
   +------+------+------+------+------+------+------+------+
-  |RAM_EN|  IO  |UNUSED| IE1  | IE0  |UNUSED| ME1  | ME0  | 
+  |ramen|  IO  |UNUSED| IE1  | IE0  |UNUSED| ME1  | ME0  | 
   +------+------+------+------+------+------+------+------+
 */
+
+/* Memory Map:
+ * 0x0000-0x7FFF : RAM1 (32K)
+ * 0x8000-0xFBFF : RAM2/ROM (31K)
+ * 0xFC00-0xFDFF : I/O Expansion
+ * 0xFE00-0xFEFF : Fixed I/O
+ * 0xFF00-0xFFFF : ROM (1K)
+ */
+
 
 /* *************** INPUT PINS *********************/
 PIN 1  = vacc;       /* Video access control (active high) */
@@ -77,89 +85,81 @@ PIN 9  = a13;
 PIN 10 = a14;
 PIN 11 = a15;
 PIN 13 = io;         /* I/O select (active high) */
-PIN 14 = ie0;        /* ROM page select (active high) */
-PIN 23 = ram_en;    /* Video access control (active high) */
+PIN 14 = ie0;        /* ROM bank select (active high) */
+PIN 15 = rdy;        /* System ready signal (active high) */
+PIN 22 = e1          /* E clock delayed ready signal for correct addr setup */
+PIN 23 = ramen;      /* RAM enable (active high) */
 
 /* *************** OUTPUT PINS ********************/
-PIN 22 = !wr;        /* Write enable */
-PIN 15 = !rom;       /* ROM chip select */
-PIN 21 = !ram_1;     /* Lower RAM select */
-PIN 16 = !ram_2;     /* Upper RAM select */
-PIN 20 = ma15;       /* ROM bank address bit */
+PIN 16 = E;           /* MC68XX E clock output */
+PIN 17 = romb;        /* ROM chip select - active low */
+PIN 18 = ram2b;       /* Upper RAM select - active low */
+PIN 19 = ram1b;       /* Lower RAM chip select - active low */
+PIN 20 = ma15;        /* ROM bank address bit */
+PIN 21 = wrb;         /* Write enable - active low*/
 
 /* *************** DECLARATIONS *******************/
 FIELD address = [a15..a8];
 
 /* Memory region definitions */
-rom_hole  = a15 & a14 & a13 & a12 & a11 & a10 & a9 & a8;     /* 0xFF00-0xFFFF - permanent */
-io_hole_1 = a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8;    /* 0xFE00-0xFEFF - permanent */
-io_hole_2 = io & a15 & a14 & a13 & a12 & a11 & a10 & !a9;    /* 0xFC00-0xFDFF - dynamic */
-dpm_hole  = io & a15 & !a14 & !a13 & !a12;                   /* 0x8000-0x8FFF - dynamic */
+/* 0xFF00-0xFFFF - permanent */
+rom_hole  = !vacc & a15 & a14 & a13 & a12 & a11 & a10 & a9 & a8;     
+/* 0xFE00-0xFEFF - permanent */
+io_hole_1 = !vacc &a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8;    
+
+/* 0xFC00-0xFDFF - dynamic */
+io_hole_2 = !vacc & io & a15 & a14 & a13 & a12 & a11 & a10 & !a9;    
+
+/* 0x8000-0x8FFF - dynamic */
+dpm_hole  = !vacc & io & a15 & !a14 & !a13 & !a12;                   
 
 /* *************** EQUATIONS *********************/
-/* ROM select logic */
-rom = !(!ram_en & a15 & r_w & !vacc & !(io_hole_1 # io_hole_2 # dpm_hole) 
+
+/* ROM select active when in upper memory, not I/O space, and reading */
+romb = !(!ramen & a15 & r_w & !io_hole_1 & !io_hole_2 & !dpm_hole 
       # rom_hole);
 
 /* Lower RAM select (0x0000-0x7FFF) */
-ram_1 = !(!a15 & !vacc);
+ram1b = !(!a15 & !vacc);
 
-/* Upper RAM select (0x8000-0xFFFF) */
-ram_2 = !(!vacc & ram_en & !(io_hole_1 # io_hole_2 # dpm_hole)
-        # !vacc & !ram_en & a15 & !r_w
-        # !vacc & !rom_hole
-        # vacc);
+/* RAM2 active for upper memory writes and non-ROM/IO reads */
+ram2b = !(ramen & !io_hole_1 & !io_hole_2 & !dpm_hole)
+        # !(!vacc & !ramen & a15 & !r_w)
+        # !rom_hole
+        # vacc;
 
 /* Memory address bit 15 control */
-ma15 = !ram_en & a15 & ie0 & !(rom_hole # io_hole_1 # io_hole_2 # dpm_hole);
+ma15 = ramen & a15 & ie0 & !rom_hole & !io_hole_1 & ! io_hole_2 & !dpm_hole;
 
-TEST_VECTORS ([ram_en phi2 r_w a15 a14 a13 a12 a11 a10 a9 a8 io vacc ie0] => [wr rom ram_1 ram_2 ma15])
+/* Write enable strobe */
+wrb = !(phi2 & !r_w)
 
-/* Video Access Priority Tests - should block everything */
-[0 1 1 0 0 0 0 0 0 0 0 0 1 0] => [1 1 1 1 0] /* Video blocks lower RAM */
-[0 1 1 1 1 1 1 1 1 1 1 0 1 0] => [1 1 1 1 0] /* Video blocks ROM area */
-[0 1 1 1 1 1 1 1 1 0 0 1 1 0] => [1 1 1 1 0] /* Video blocks I/O area */
-[0 1 1 1 0 0 0 0 0 0 0 1 1 0] => [1 1 1 1 0] /* Video blocks DPM area */
+/* Generate E clock for 68XX peripherals */
+e = !(e1 &  rdy)
 
-/* I/O and DPM Tests - io signal control */
-[0 1 1 1 1 1 1 1 1 0 0 1 0 0] => [1 1 1 0 0] /* IO2 active when io=1 */
-[0 1 1 1 1 1 1 1 1 0 0 0 0 0] => [1 0 1 1 0] /* IO2 inactive when io=0 */
-[0 1 1 1 0 0 0 0 0 0 0 1 0 0] => [1 1 1 0 0] /* DPM active when io=1 */
-[0 1 1 1 0 0 0 0 0 0 0 0 0 0] => [1 0 1 1 0] /* DPM inactive when io=0 */
+TEST_VECTORS ([vacc phi2 r_w ramenb ie0 io a15..a8 rdy e1] => [e romb ram2b ram1b ma15 wrb])
 
-/* ROM Banking Tests - independent of I/O */
-[0 1 1 1 0 0 0 0 0 0 0 0 0 1] => [1 0 1 1 1] /* ROM page 1 with io=0 */
-[0 1 1 1 0 0 0 0 0 0 0 1 0 1] => [1 0 1 1 1] /* ROM page 1 with io=1 (outside IO/DPM areas) */
+/* ROM access */
+[0 1 1 0 0 0 1 1 1 1 1 1 1 1 1 1] => [1 0 1 1 0 1]; /* ROM read bank 0 */
+[0 1 1 0 1 0 1 1 1 1 1 1 1 1 1 1] => [1 0 1 1 1 1]; /* ROM read bank 1 */
+[0 1 0 0 0 0 1 1 1 1 1 1 1 1 1 1] => [1 1 0 1 0 0]; /* ROM write-through */
 
-/* I/O Holes in ROM Space */
-[0 1 1 1 1 1 1 1 1 1 0 1 0 1] => [1 1 1 0 0] /* IO1 cuts hole in ROM space */
-[0 1 1 1 1 1 1 1 1 0 0 1 0 1] => [1 1 1 0 0] /* IO2 cuts hole in ROM space */
+/* RAM access */
+[0 1 1 0 0 0 0 0 0 0 0 0 0 0 1 1] => [1 1 1 0 0 1]; /* Low RAM read */
+[0 1 0 0 0 0 0 0 0 0 0 0 0 0 1 1] => [1 1 1 0 0 0]; /* Low RAM write */
+[0 1 1 0 0 0 1 0 0 0 0 0 0 0 1 1] => [1 1 0 1 0 1]; /* High RAM read */
+[0 1 0 0 0 0 1 0 0 0 0 0 0 0 1 1] => [1 1 0 1 0 0]; /* High RAM write */
 
-/* DPM with Banking */
-[1 1 1 1 0 0 0 0 0 0 0 1 0 0] => [1 1 1 0 0] /* DPM active with banking */
-[1 1 1 1 0 0 0 0 0 0 0 0 0 0] => [1 1 1 0 1] /* Normal banking without DPM */
+/* I/O and DPM regions */
+[0 1 1 0 0 0 1 1 1 1 1 1 1 0 1 1] => [1 1 1 1 0 1]; /* Fixed I/O 0xFE00 */
+[0 1 1 0 0 1 1 1 1 1 1 0 0 0 1 1] => [1 1 1 1 0 1]; /* Exp I/O 0xFC00 */
+[0 1 1 0 0 1 1 0 0 0 0 0 0 0 1 1] => [1 1 1 1 0 1]; /* DPM 0x8000 */
 
-/* Basic Operation Tests */
-[0 1 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0] /* Lower RAM read */
-[0 1 0 0 0 0 0 0 0 0 0 0 0 0] => [0 1 0 1 0] /* Lower RAM write */
-[0 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 0 1 1 0] /* ROM read */
-[0 1 0 1 1 1 1 1 1 1 1 0 0 0] => [0 0 1 1 0] /* ROM write-through */
+/* Video access */
+[1 1 1 0 0 0 1 1 1 1 1 1 1 1 1 1] => [1 1 1 1 0 1]; /* VACC ROM */
+[1 1 1 0 0 0 0 0 0 0 0 0 0 0 1 1] => [1 1 1 1 0 1]; /* VACC RAM */
 
-/* Timing Tests - Address Setup and Hold */
-/* Address and R/W must be valid before phi2 rises */
-[0 0 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 0] /* Initial state, phi2 low */
-[0 1 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0] /* phi2 rises, address stable */
-[0 0 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 0] /* phi2 falls, address held */
-
-/* Write Cycle Timing */
-[0 0 0 0 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 0] /* Setup R/W low, phi2 low */
-[0 1 0 0 0 0 0 0 0 0 0 0 0 0] => [0 1 0 1 0] /* phi2 rises, R/W stable */
-[0 0 0 0 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 0] /* phi2 falls, R/W held */
-
-/* Address Change During phi2 High (should not happen) */
-[0 1 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0] /* Valid address, phi2 high */
-[0 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 0 1 0] /* Address change during phi2 high - undefined */
-
-/* R/W Change During phi2 High (should not happen) */
-[0 1 1 0 0 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0] /* Read cycle, phi2 high */
-[0 1 0 0 0 0 0 0 0 0 0 0 0 0] => [0 1 0 1 0] /* Change to write during phi2 high - undefined */
+/* E clock generation */
+[0 1 1 0 0 0 0 0 0 0 0 0 0 0 1 1] => [1 1 1 0 0 1]; /* E high */
+[0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 1] => [0 1 1 0 0 1]; /* E low (rdy=0) */
+[0 1 1 0 0 0 0 0 0 0 0 0 0 0 1 0] => [0 1 1 0 0 1]; /* E low (e1=0) */
