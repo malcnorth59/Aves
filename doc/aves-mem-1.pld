@@ -15,13 +15,13 @@ Device   g22v10;
       vacc |1          24| Vcc
       phi2 |2          23| ramen
        r_w |3          22| wrb
-        a8 |4          21| e1
+        a8 |4          21| nc
         a9 |5          20| ma15
        a10 |6          19| ram1b
        a11 |7          18| ram2b
        a12 |8          17| romb
-       a13 |9          16| e
-       a14 |10         15| rdy
+       a13 |9          16| nc
+       a14 |10         15| rdb
        a15 |11         14| ie0
        GND |12         13| io
            \_____________/
@@ -40,17 +40,15 @@ Inputs:
   11 - a15       : Address bit 15
   13 - io        : I/O select (active high)
   14 - ie0       : ROM page select
-  15 - rdy       : Ready signal
-  22 - e1        : ready signal delayed by 1 clock
   23 - vacc      : Video access (active high)
 
 Outputs:
-  16 - e         : E output for 1MHz 6845
+  15 - rdb       : Memory read strobe - active low
   17 - romb      : ROM chip select - active low
   18 - ram2b     : RAM2 chip select - active low
   19 - ram1b     : RAM1 chip select - active low
   20 - ma15      : EPROM expanded bank address
-  21 - wrb       : memory write strobe - active low
+  22 - wrb       : Memory write strobe - active low
 
 Power:
   12 - GND       : Ground
@@ -86,17 +84,16 @@ PIN 10 = a14;
 PIN 11 = a15;
 PIN 13 = io;         /* I/O select (active high) */
 PIN 14 = ie0;        /* ROM bank select (active high) */
-PIN 15 = rdy;        /* System ready signal (active high) */
-PIN 22 = e1          /* E clock delayed ready signal for correct addr setup */
+*/
 PIN 23 = ramen;      /* RAM enable (active high) */
 
 /* *************** OUTPUT PINS ********************/
-PIN 16 = E;           /* MC68XX E clock output */
+PIN 15 = rdb;          /* Write Enable - active low */
 PIN 17 = romb;        /* ROM chip select - active low */
 PIN 18 = ram2b;       /* Upper RAM select - active low */
 PIN 19 = ram1b;       /* Lower RAM chip select - active low */
 PIN 20 = ma15;        /* ROM bank address bit */
-PIN 21 = wrb;         /* Write enable - active low*/
+PIN 22 = wrb;         /* Write enable - active low*/
 
 /* *************** DECLARATIONS *******************/
 FIELD address = [a15..a8];
@@ -132,34 +129,29 @@ ram2b = !(ramen & !io_hole_1 & !io_hole_2 & !dpm_hole)
 ma15 = ramen & a15 & ie0 & !rom_hole & !io_hole_1 & ! io_hole_2 & !dpm_hole;
 
 /* Write enable strobe */
-wrb = !(phi2 & !r_w)
+wrb = !(phi2 & !r_w);
 
-/* Generate E clock for 68XX peripherals */
-e = !(e1 &  rdy)
+/* Read enable strobe */
+rdb = !(phi2 &  r_w);
 
-TEST_VECTORS ([vacc phi2 r_w ramenb ie0 io a15..a8 rdy e1] => [e romb ram2b ram1b ma15 wrb])
+TEST_VECTORS ([vacc phi2 r_w a8..a15 io ie0 ramen] => [rdb romb ram2b ram1b ma15 wrb])
 
 /* ROM access */
-[0 1 1 0 0 0 1 1 1 1 1 1 1 1 1 1] => [1 0 1 1 0 1]; /* ROM read bank 0 */
-[0 1 1 0 1 0 1 1 1 1 1 1 1 1 1 1] => [1 0 1 1 1 1]; /* ROM read bank 1 */
-[0 1 0 0 0 0 1 1 1 1 1 1 1 1 1 1] => [1 1 0 1 0 0]; /* ROM write-through */
+[0 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 0 1 1 0 1]; /* ROM read bank 0 */
+[0 1 1 1 1 1 1 1 1 1 1 0 1 0] => [1 0 1 1 1 1]; /* ROM read bank 1 */
+[0 1 0 1 1 1 1 1 1 1 1 0 0 0] => [0 1 0 1 0 0]; /* ROM write-through */
 
 /* RAM access */
-[0 1 1 0 0 0 0 0 0 0 0 0 0 0 1 1] => [1 1 1 0 0 1]; /* Low RAM read */
-[0 1 0 0 0 0 0 0 0 0 0 0 0 0 1 1] => [1 1 1 0 0 0]; /* Low RAM write */
-[0 1 1 0 0 0 1 0 0 0 0 0 0 0 1 1] => [1 1 0 1 0 1]; /* High RAM read */
-[0 1 0 0 0 0 1 0 0 0 0 0 0 0 1 1] => [1 1 0 1 0 0]; /* High RAM write */
+[0 1 1 1 1 0 0 0 0 0 0 0 0 0] => [1 1 1 0 0 1]; /* Low RAM read */
+[0 1 0 1 1 0 0 0 0 0 0 0 0 0] => [0 1 1 0 0 0]; /* Low RAM write */
+[0 1 1 1 1 0 0 0 0 0 1 0 0 0] => [1 1 0 1 0 1]; /* High RAM read */
+[0 1 0 1 1 0 0 0 0 0 1 0 0 0] => [0 1 0 1 0 0]; /* High RAM write */
 
 /* I/O and DPM regions */
-[0 1 1 0 0 0 1 1 1 1 1 1 1 0 1 1] => [1 1 1 1 0 1]; /* Fixed I/O 0xFE00 */
-[0 1 1 0 0 1 1 1 1 1 1 0 0 0 1 1] => [1 1 1 1 0 1]; /* Exp I/O 0xFC00 */
-[0 1 1 0 0 1 1 0 0 0 0 0 0 0 1 1] => [1 1 1 1 0 1]; /* DPM 0x8000 */
+[0 1 1 1 0 1 1 1 1 1 1 0 0 0] => [1 1 1 1 0 1]; /* Fixed I/O 0xFE00 */
+[0 1 1 1 1 0 0 1 1 1 1 1 0 0] => [1 1 1 1 0 1]; /* Exp I/O 0xFC00 */
+[0 1 1 0 0 0 0 0 0 1 1 1 0 0] => [1 1 1 1 0 1]; /* DPM 0x8000 */
 
 /* Video access */
-[1 1 1 0 0 0 1 1 1 1 1 1 1 1 1 1] => [1 1 1 1 0 1]; /* VACC ROM */
-[1 1 1 0 0 0 0 0 0 0 0 0 0 0 1 1] => [1 1 1 1 0 1]; /* VACC RAM */
-
-/* E clock generation */
-[0 1 1 0 0 0 0 0 0 0 0 0 0 0 1 1] => [1 1 1 0 0 1]; /* E high */
-[0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 1] => [0 1 1 0 0 1]; /* E low (rdy=0) */
-[0 1 1 0 0 0 0 0 0 0 0 0 0 0 1 0] => [0 1 1 0 0 1]; /* E low (e1=0) */
+[1 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 0 1 0 1]; /* VACC ROM */
+[1 1 1 1 1 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0 1]; /* VACC RAM */
