@@ -1,5 +1,16 @@
-cat << 'EOF' > asb.adoc
-= ASB Protocol Design Notes
+= ASB Protocol: Reference manual
+Malcolm North, December 2024
+:doctype: book
+// :title-page-background-image: image:logo.png[]
+:title-logo-image: image:kingfisher.jpg[top=0.5in,align=center,pdfwidth=7in]
+:pdf-page-size: a4
+:toc:
+:sectnums:
+:sectnumlevels: 1
+:partnums:
+:chapter-signifier: Chapter
+:part-signifier: Part
+:media: prepress
 
 == Foundational Influences
 include::introduction.adoc[]
@@ -21,4 +32,3 @@ include::transport.adoc[]
 
 == Performance Analysis
 include::performance.adoc[]
-EOF

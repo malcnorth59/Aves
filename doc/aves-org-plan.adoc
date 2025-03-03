@@ -1,0 +1,128 @@
+= Documentation Organization Plan
+:toc:
+
+== Document Structure Guidelines
+
+=== Common Front Matter Components
+Each manual will have the following structure with separate files:
+
+* book-info.adoc (ISBN, copyright, publication info)
+* title-page.adoc
+* abstract.adoc  
+* foreword.adoc
+* contents.adoc
+* preface.adoc
+
+=== Directory Structure
+
+----
+hardware-manual/
+  └── front-matter/
+      ├── book-info.adoc
+      ├── title-page.adoc
+      ├── abstract.adoc
+      ├── foreword.adoc
+      ├── contents.adoc
+      └── preface.adoc
+  └── parts/
+      ├── part1-architecture/
+      │   ├── chapter1-intro.adoc
+      │   ├── chapter2-overview.adoc
+      │   └── chapter3-design.adoc
+      ├── part2-components/
+      └── part3-video/
+  └── back-matter/
+      ├── appendices.adoc
+      ├── glossary.adoc
+      └── index.adoc
+  └── hardware-manual.adoc (main include file)
+
+software-manual/
+  └── front-matter/
+      ├── book-info.adoc
+      ├── title-page.adoc
+      ├── abstract.adoc
+      ├── foreword.adoc
+      ├── contents.adoc
+      └── preface.adoc
+  └── parts/
+      ├── part1-getting-started/
+      ├── part2-fundamentals/
+      ├── part3-architecture/
+      ├── part4-runtime/
+      ├── part5-development/
+      └── part6-reference/
+  └── back-matter/
+      ├── appendices.adoc
+      ├── glossary.adoc
+      └── index.adoc
+  └── software-manual.adoc (main include file)
+----
+
+=== Main Document Structure
+
+.hardware-manual.adoc
+----
+= Aves Hardware Reference Manual
+:doctype: book
+:toc:
+:sectnums:
+
+include::front-matter/book-info.adoc[]
+include::front-matter/title-page.adoc[]
+include::front-matter/abstract.adoc[]
+include::front-matter/foreword.adoc[]
+include::front-matter/contents.adoc[]
+include::front-matter/preface.adoc[]
+
+include::parts/part1-architecture/*.adoc[]
+include::parts/part2-components/*.adoc[]
+include::parts/part3-video/*.adoc[]
+include::parts/part4-pld/*.adoc[]
+
+include::back-matter/appendices.adoc[]
+include::back-matter/glossary.adoc[]
+include::back-matter/index.adoc[]
+----
+
+=== Build Configuration
+
+.Makefile targets for different outputs:
+----
+pdf-full: Generate complete PDF with all sections
+pdf-front: Generate front matter only (for review)
+pdf-body: Generate main content without front/back matter
+pdf-parts: Generate individual part PDFs
+html: Generate HTML version
+----
+
+== Implementation Notes
+
+1. Front Matter
+* Each component in separate file for independent review/printing
+* Consistent styling across both manuals
+* Version control friendly
+
+2. Main Content
+* Organized by parts and chapters
+* Cross-references use document IDs
+* Images in separate directories
+* Code listings as separate files
+
+3. Build System
+* Makefile targets for different outputs
+* PDF generation with proper page numbering
+* HTML with navigation
+* Index generation
+* Cross-reference validation
+
+4. Version Control
+* Each part can be worked on independently
+* Clear separation of content and structure
+* Easy to track changes in specific sections
+
+5. Quality Control
+* Separate build targets for reviewing sections
+* Validation of cross-references
+* Style guide compliance checking
+* Technical review process

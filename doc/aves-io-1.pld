@@ -8,76 +8,63 @@ Assembly None;
 Location None;
 Device   G22V10;
 
-/* Aves Sparrow and Robin Memory Decoder
- * Purpose: Memory mapping and control logic for 64K address space
- * Version: 1.0
- * 
- * Memory Map:
- * Address Range  | Size  | Function
- * 0x0000-0x7FFF | 32K   | Main RAM
- * 0x8000-0x8FFF | 4K    | DPM (when io =1)
- * 0x8000-0xFBFF | 31K   | Banked RAM/ROM
- * 0xFC00-0xFDFF | 512B  | I/O (when io=1)
- * 0xFE00-0xFEFF | 256B  | I/O (always)
- * 0xFF00-0xFFFF | 256B  | ROM (always)
-
-                  G22V10
-                  _______
-            vacc |1    24| VCC
-            phi2 |2    23| a6
-             r_w |3    22| wait
-              a8 |4    21| mcr
-              a9 |5    20| vic
-             a10 |6    19| wr
-             a11 |7    18| rdy
-             a12 |8    17| dpm
-             a13 |9    16| xio
-             a14 |10   15| kbd
-             a15 |11   14| a7
-             GND |12   13| io
-                 |_______|
- 
- Input Pins:
-  1: vacc  - Video access control (active high)
-  2: phi2  - System clock phase 2
-  3: r_w   - Read/Write control (low=write)
-  4-11: a8-a15 - Address bus
-  13: io   - I/O select
-  14: a7   - Address bit 7
-  23: a6   - Address bit 6
-  22: wait - Wait state input
- 
- Output Pins (all active low):
-  21: mcr  - Memory Control Register select
-  20: vic  - VIC chip select
-  19: wr   - Write enable
-  18: rdy  - Ready signal
-  17: dpm  - Dual Port Memory select
-  16: xio  - I/O expansion select
-  15: kbd  - Keyboard interface select
- 
- Power:
-  24: VCC (+5V)
-  12: GND
-
-  +------+------+------+------+------+------+------+------+
-  |Bit 7 |Bit 6 |Bit 5 |Bit 4 |Bit 3 |Bit 2 |Bit 1 |Bit 0 |
-  +------+------+------+------+------+------+------+------+
-  |RAM_EN|  IO  |UNUSED| IE1  | IE0  |UNUSED| ME1  | ME0  | 
-  +------+------+------+------+------+------+------+------+
+/* *************** INPUT PINS ********************
+ *                  ______ ______
+ *           vacc =| 1    U    24|= VCC
+ *           phi2 =| 2         23|= a6
+ *            r_w =| 3         22|= waitb
+ *             a8 =| 4         21|= mcrb
+ *             a9 =| 5         20|= vicb
+ *            a10 =| 6         19|= rdy
+ *            a11 =| 7         18|= dpmb
+ *            a12 =| 8         17|= viab
+ *            a13 =| 9         16|= xiob
+ *            a14 =|10         15|= kbdb
+ *            a15 =|11         14|= a7
+ *            GND =|12         13|= io
+ *                  -------------
+ *
+ * Note: Pin 24 (VCC) and Pin 12 (GND) are not
+ *       declared in pin list
  */
 
-/* Pin Declarations */
-Pin 1  = vacc;        /* Video access control (active high) */
-Pin 2  = phi2;        /* System clock phase 2 (active high) */
-Pin 3  = r_w;         /* Read/Write control (active low for write) */
-Pin 13 = io;          /* I/O select (active high) */
-Pin 22 = wait;        /* Wait state, delayed ready signal */
+/* Memory Map:
+ * 0x0000-0x7FFF | 32K   | Main RAM
+ * 0x8000-0x8FFF | 4K    | DPM (when io=1)
+ * 0x8000-0xFBFF | 31K   | Banked RAM/ROM (when io=0)
+ * 0xFC00-0xFDFF | 512B  | I/O Expansion (when io=1)
+ * 0xFE00-0xFEFF | 256B  | Fixed I/O
+ *   0xFE00-0xFE3F |  64B  | KBD Interface
+ *   0xFE40-0xFE7F |  64B  | VIC
+ *   0xFE80-0xFEBF |  64B  | VIA
+ *   0xFEC0-0xFEFF |  64B  | MCR
+ * 0xFF00-0xFFFF | 256B  | ROM
+ */
+
+/* Signal Polarity:
+ * Inputs:
+ *   vacc  - active high
+ *   phi2  - active high
+ *   r_w   - active low (low=write)
+ *   io    - active high
+ *   waitb - active low
+ * Outputs:
+ *   All chip selects (mcrb,vicb,viab,xiob,kbdb) - active low
+ *   rdy   - active low
+ *   dpmb  - active low
+ */
+
+/* Pin Declarations - All outputs active low */
+Pin 1  = vacc;    /* Video access control (active high) */
+Pin 2  = phi2;    /* System clock phase 2 (active high) */
+Pin 3  = r_w;     /* Read/Write control (low=write) */
+Pin 13 = io;      /* I/O select (active high) */
+Pin 22 = waitb;   /* Wait state input (active low) */
 
 /* Address bus */
-Pin 23 = a6;          /* Address lines 6-15 */
+Pin 23 = a6;      /* Address lines 6-15 */
 Pin 14 = a7;
-Pin 4  = a8;           
+Pin 4  = a8;
 Pin 5  = a9;
 Pin 6  = a10;
 Pin 7  = a11;
@@ -86,69 +73,61 @@ Pin 9  = a13;
 Pin 10 = a14;
 Pin 11 = a15;
 
-/* Output Pins - All outputs are active low */
-Pin 21 = mcr;         /* MCR chip select */
-Pin 15 = kbd;         /* KBD chip select */
-Pin 20 = vic;         /* VIC chip select */
-Pin 16 = xio;         /* I/O expansion chip select */
-Pin 19 = wr;          /* Write enable chip select */
-Pin 17 = dpm;         /* Dual Port Memory chip select */
-Pin 18 = rdy;         /* Ready signal to stretch access times */
+/* Output Pins - All active low */
+Pin 21 = mcrb;    /* Memory Control Register select */
+Pin 20 = vicb;    /* VIC chip select */
+Pin 19 = rdy;     /* Ready signal */
+Pin 18 = dpmb;    /* Dual Port Memory select */
+Pin 17 = viab;    /* VIA chip select */
+Pin 16 = xiob;    /* I/O expansion select */
+Pin 15 = kbdb;    /* Keyboard interface select */
 
-/* Intermediate equations */
+/* Address field definition */
 Field address = [a15..a6];
 
 /* I/O region definitions */
-io_hole_1 = a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8;    /* 0xFE00-0xFEFF (256B) - permanent  */
-io_hole_2 = io & a15 & a14 & a13 & a12 & a11 & a10 & !a9;    /* 0xFC00-0xFDFF (512B) - selectable */
-dpm_hole  = dpm & a15 & !a14 & !a13 & !a12;                  /* 0x8000-0x8FFF (4K)   - selectable */
+io_hole_1 = !vacc & a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8;    /* 0xFE00-0xFEFF */
+io_hole_2 = !vacc & io & a15 & a14 & a13 & a12 & a11 & a10 & !a9;    /* 0xFC00-0xFDFF */
+dpm_hole  = !vacc & io & a15 & !a14 & !a13 & !a12;                   /* 0x8000-0x8FFF */
 
 /* Output equations */
-mcr    = !((!vacc & phi2 & io_hole_1 & a7 & a6));        /* Memory control register at 0xFEC0 (64) */
-kbd    = !((!vacc & phi2 & io_hole_1 & !a7 & !a6));      /* PS/2 Keyboard interface at 0xFE00 (64) */
-vic    = !((!vacc & io_hole_1 & !a7 & a6 & wait));       /* VIC chip select at 0xFE40 (64) */
-via    = !((!vacc & io_hole_1 & a7 & !a6));              /* VIA chip select at 0xFEE0 (32) */
+mcrb  = !(phi2 & io_hole_1 & a7 & a6);        /* 0xFEC0-0xFEFF */
+kbdb  = !(phi2 & io_hole_1 & !a7 & !a6);      /* 0xFE00-0xFE3F */
+vicb  = !(io_hole_1 & !a7 & a6 & !waitb);     /* 0xFE40-0xFE7F */
+viab  = !(io_hole_1 & a7 & !a6);              /* 0xFE80-0xFEBF */
+xiob  = !(io_hole_2 & (!a8 # (a8 & !waitb))); /* 0xFC00-0xFDFF */
+dpmb  = !dpm_hole;                            /* 0x8000-0x8FFF */
+rdy   = !((io_hole_1 & !a7 & a6) #            /* VIC access */
+          (io_hole_2 & a8));                  /* Slow I/O page */
 
-/* I/O expansion port select signal at 0xFC00 (256)
- * At FD00 (256) select signal is synchronized with 1MHz Phi2
- * for original 1MHz peripherals
- */
-xio    = !((!vacc & io_hole_2 & !a8) # 
-           (!vacc & io_hole_2 & a8 & wait));             
+/* Test Vectors */
+TEST_VECTORS ([vacc phi2 r_w io waitb a15 a14 a13 a12 a11 a10 a9 a8 a7 a6] => 
+              [mcrb vicb rdy dpmb viab xiob kbdb])
 
-dpm    = !((!vacc & dpm_hole));                          /* Dual port memory */
+/* Fixed I/O Tests */
+[0 1 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 1 1 1 1 0] /* KBD read */
+[0 1 0 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 1 1 1 1 0] /* KBD write */
+[0 0 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 1 1 1 1 1] /* KBD phi2=0 */
 
-/* Generate ready signal for wait state generator */
-rdy    = (!vacc & io_hole_1 & !a7 & a6) #                /* VIC access */
-         (!vacc & io_hole_2 & a8);                        /* Slow I/O access */
+[0 1 1 1 1 1 1 1 1 1 1 1 0 0 1] => [1 0 0 1 1 1 1] /* VIC read */
+[0 1 1 1 0 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* VIC waitb=0 */
 
-/* Write enable control
- * Active during phi2 high and r_w low
- * Disabled during video access
- */
-wr     = !(phi2 & !r_w & !vacc);
-/* Test Vectors for Aves I/O Decoder
- * Format: [inputs] -> [outputs]
- * Inputs:  vacc phi2 r_w io wait a15-a14-a13-a12-a11-a10-a9-a8-a7-a6
- * Outputs: mcr kbd vic xio wr dpm rdy
- */
+[0 1 1 1 1 1 1 1 1 1 1 1 0 1 0] => [1 1 1 1 0 1 1] /* VIA access */
+[0 1 1 1 1 1 1 1 1 1 1 1 0 1 1] => [0 1 1 1 1 1 1] /* MCR access */
 
-/* Test Vectors for Aves I/O Decoder
- * Format: [inputs] => [outputs]
- * Inputs:  vacc phi2 r_w io wait a15-a14-a13-a12-a11-a10-a9-a8-a7-a6
- * Outputs: mcr kbd vic xio wr dpm rdy
- */
+/* Switchable I/O Tests */
+[0 1 1 1 1 1 0 0 0 0 0 0 0 0 0] => [1 1 1 0 1 1 1] /* DPM enabled */
+[0 1 1 0 1 1 0 0 0 0 0 0 0 0 0] => [1 1 1 1 1 1 1] /* DPM disabled */
 
-TEST_VECTORS ([vacc phi2 r_w io wait a15 a14 a13 a12 a11 a10 a9 a8 a7 a6] => [mcr kbd vic xio wr dpm rdy])
+[0 1 1 1 1 1 1 1 1 1 1 0 0 0 0] => [1 1 1 1 1 0 1] /* IOX fast page */
+[0 1 1 1 1 1 1 1 1 1 1 0 1 0 0] => [1 1 0 1 1 0 1] /* IOX slow page */
+[0 1 1 0 1 1 1 1 1 1 1 0 0 0 0] => [1 1 1 1 1 1 1] /* IOX disabled */
 
-/* 1. Memory Control Register Tests (0xFEC0) */
-[0 1 1 X 1 1 1 1 1 1 1 1 0 1 1] => [0 1 1 1 1 1 1] /* Normal read */
-[0 0 1 X 1 1 1 1 1 1 1 1 0 1 1] => [1 1 1 1 1 1 1] /* phi2 low */
-[0 1 0 X 1 1 1 1 1 1 1 1 0 1 1] => [0 1 1 1 0 1 1] /* Write cycle */
+/* Control Signal Tests */
+[1 1 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 1 1 1 1 1] /* VACC override */
+[0 0 1 1 1 1 1 1 1 1 1 1 0 0 1] => [1 1 1 1 1 1 1] /* Clock inactive */
+[0 1 1 1 0 1 1 1 1 1 1 0 1 0 0] => [1 1 1 1 1 1 1] /* Wait state */
 
-/* 2. Keyboard Interface Tests (0xFE00) */
-[0 1 1 X 1 1 1 1 1 1 1 1 0 0 0] => [1 0 1 1 1 1 1] /* Normal read */
-[0 0 1 X 1 1 1 1 1 1 1 1 0 0 0] => [1 1 1 1 1 1 1] /* phi2 low */
-[0 1 0 X 1 1 1 1 1 1 1 1 0 0 0] => [1 0 1 1 0 1 1] /* Write cycle */
-
-/* Continue with remaining test vectors using same format... */
+/* Boundary Tests */
+[0 1 1 1 1 0 0 0 0 0 0 0 0 0 0] => [1 1 1 1 1 1 1] /* RAM space */
+[0 1 1 1 1 1 1 1 1 1 1 1 1 1 1] => [1 1 1 1 1 1 1] /* ROM space */
