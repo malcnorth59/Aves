@@ -28,8 +28,14 @@ hardware-manual/
       ├── part1-architecture/
       │   ├── chapter1-intro.adoc
       │   ├── chapter2-overview.adoc
-      │   └── chapter3-design.adoc
+      │   ├── chapter3-design.adoc
+      │   ├── chapter4-computational-models.adoc
+      │   └── chapter5-system-configurations.adoc
       ├── part2-components/
+      │   ├── chapter1-overview.adoc
+      │   ├── chapter2-modules.adoc
+      │   ├── chapter3-interfaces.adoc
+      │   └── chapter4-specifications.adoc
       └── part3-video/
   └── back-matter/
       ├── appendices.adoc
@@ -37,7 +43,7 @@ hardware-manual/
       └── index.adoc
   └── hardware-manual.adoc (main include file)
 
-software-manual/
+software-manual/           # Based on existing Kingfisher documentation
   └── front-matter/
       ├── book-info.adoc
       ├── title-page.adoc
@@ -47,23 +53,45 @@ software-manual/
       └── preface.adoc
   └── parts/
       ├── part1-getting-started/
+      │   ├── chapter1-introduction.adoc
+      │   ├── chapter2-quick-start.adoc
+      │   └── chapter3-basic-concepts.adoc
       ├── part2-fundamentals/
+      │   ├── chapter1-architecture-overview.adoc
+      │   ├── chapter2-core-concepts.adoc
+      │   └── chapter3-basic-operations.adoc
       ├── part3-architecture/
+      │   ├── chapter1-system-architecture.adoc
+      │   ├── chapter2-hardware-model-support.adoc
+      │   └── chapter3-implementation.adoc
       ├── part4-runtime/
+      │   ├── chapter1-execution-model.adoc
+      │   ├── chapter2-memory-management.adoc
+      │   └── chapter3-io-subsystem.adoc
       ├── part5-development/
+      │   ├── chapter1-development-environment.adoc
+      │   ├── chapter2-programming-guide.adoc
+      │   └── chapter3-debugging.adoc
       └── part6-reference/
+          ├── chapter1-api-reference.adoc
+          ├── chapter2-system-calls.adoc
+          └── chapter3-hardware-interfaces.adoc
   └── back-matter/
       ├── appendices.adoc
       ├── glossary.adoc
       └── index.adoc
   └── software-manual.adoc (main include file)
 ----
-
 === Main Document Structure
 
-.hardware-manual.adoc
+.hardware-manual.adoc template
 ----
-= Aves Hardware Reference Manual
+[existing hardware manual content]
+----
+
+.software-manual.adoc template
+----
+= Aves Software Reference Manual
 :doctype: book
 :toc:
 :sectnums:
@@ -75,14 +103,41 @@ include::front-matter/foreword.adoc[]
 include::front-matter/contents.adoc[]
 include::front-matter/preface.adoc[]
 
-include::parts/part1-architecture/*.adoc[]
-include::parts/part2-components/*.adoc[]
-include::parts/part3-video/*.adoc[]
-include::parts/part4-pld/*.adoc[]
+include::parts/part1-getting-started/*.adoc[]
+include::parts/part2-fundamentals/*.adoc[]
+include::parts/part3-architecture/*.adoc[]
+include::parts/part4-runtime/*.adoc[]
+include::parts/part5-development/*.adoc[]
+include::parts/part6-reference/*.adoc[]
 
 include::back-matter/appendices.adoc[]
 include::back-matter/glossary.adoc[]
 include::back-matter/index.adoc[]
+----
+
+=== Git Branch Strategy
+
+==== Main Branch Structure
+* `main` - stable, released version
+* `develop` - integration branch
+
+==== Feature Branch Organization
+Feature branches should be organized by logical content groups:
+
+----
+feature/hw-core-architecture     # Architecture and computational models
+feature/hw-subsystems           # Components and video sections
+feature/sw-user-guide           # Getting started and fundamentals
+feature/sw-technical-reference  # Architecture, runtime, and development
+----
+
+==== Task-Based Branches
+For specific updates:
+----
+feature/front-matter-copyright-update
+feature/hw-diagrams-update
+feature/sw-api-documentation
+feature/common-glossary-update
 ----
 
 === Build Configuration
@@ -102,6 +157,7 @@ html: Generate HTML version
 * Each component in separate file for independent review/printing
 * Consistent styling across both manuals
 * Version control friendly
+* Maintained in main branch structure, not separate branch
 
 2. Main Content
 * Organized by parts and chapters
@@ -120,9 +176,18 @@ html: Generate HTML version
 * Each part can be worked on independently
 * Clear separation of content and structure
 * Easy to track changes in specific sections
+* Regular merges from develop to feature branches
 
 5. Quality Control
 * Separate build targets for reviewing sections
 * Validation of cross-references
 * Style guide compliance checking
 * Technical review process
+* Branch protection on main and develop
+
+6. Migration Notes
+* Software manual based on existing Kingfisher documentation
+* Restructure Kingfisher content to match new organization
+* Preserve existing content while reorganizing
+* Update cross-references and links
+* Ensure consistent styling with hardware manual

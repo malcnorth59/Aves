@@ -4,7 +4,7 @@
 == Overview
 The Aves documentation will be consolidated into two comprehensive manuals:
 
-1. Hardware Manual - Covering all Aves models design
+1. Hardware Manual - Covering the design of all Aves models
 2. Software Manual - Covering the Kingfisher programming language and tools
 
 == Hardware Manual Structure
