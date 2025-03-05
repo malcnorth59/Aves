@@ -1,0 +1,63 @@
+= Aves Software Manual
+Malcolm North, December 2024
+:doctype: book
+:title-page-background-image: image:logo.png[]
+:title-logo-image: image:kingfisher.jpg[top=0.5in,align=center,pdfwidth=7in]
+:pdf-page-size: a4
+:toc:
+:sectnums:
+:sectnumlevels: 1
+:partnums:
+:chapter-signifier: Chapter
+:part-signifier: Part
+:media: prepress
+
+== Foreword
+The Kingfisher Programming Language (KPL or KF) is a key component of Project Aves, which emerged from research into vintage Commodore computer systems and explores ways to enhance both hardware and software capabilities while adhering to their architectural principles.
+
+Project Aves includes new designs that incorporate original video and sound devices with modern components, offering lower power consumption, higher performance and additional capacity. Kingfisher provides the software foundation to access these capabilities, offering built-in functions for disk drives, video, and sound chips, along with a flexible extension mechanism.
+
+Commodore's original BASIC and Kernal had limited features to enable accessing disk drives, the custom video, and the sound chips. Kingfisher provides built in functions to achieve this, and a method to extend the language should the need arise.
+
+The language itself draws inspiration from several sources: the stack-based simplicity of Forth, the readability of Python, the modularity of Go, and the type safety of Modula-2. These influences have been adapted to work within the limited resources of the target platforms while enhancing the programmer experience.
+
+Kingfisher currently supports:
+
+* Commodore 8-bit computers (PET, CBM series, VIC-20, C64, C16, Plus/4)
+* Aves retro systems based on:
+  * Rockwell R65C02
+  ** WDC 65C02/65C81
+  ** NEC V25/35
+  ** Motorola 68HC000
+  ** Zilog Z16C01
+
+Kingfisher's foundation is Forth, although very little of the standard Forth vocabulary is utilised. Forth's Dictionary, parameter stack, interpreter and compiler are retained, and the compiler produces threaded code. This architecture is well suited to vintage systems with limited resources, it is easy to implement, and its inherent simplicity allows it to be ported to different CPUs with relative ease. The inner interpreter (or virtual machine) can be built using Indirect, Direct, or Subroutine threading without requiring extensive code changes. The Text Interpreter and Compiler are also remarkably small and are factored in to small execution units called words which pass values via the parameter stack. All of these features are highly desirable and help to make Kingfisher compact, with enough flexibility to optimise the architecture to suit the underlying hardware.
+
+In addition to these core Forth features Kingfisher  introduces new features found in other languages such as strong typing, object orientation and additional data structures.
+
+Kingfisher is a statically typed language which allows most of the checking to be done at compile time, and to simplify memory management collections and strings are passed by reference. 
+
+The object oriented programming features are based on Go's struct and linked method architecture, which are called Type and Method in Kingfisher. Data in the Type structure can only be accessed from a linked method which provides a mechanism for data hiding and encapsulation. Polymorphism is achieved by adopting Forth's stack effect comments as part of the method signature, and replacing Forth's comments with the more common `//` style. Types and methods are used to create abstract data types in Kingfisher to implement all of its variables and collections. 
+
+This reference document provides comprehensive documentation of Kingfisher's syntax, features, and implementation. It is intended that this document will be used as a blueprint for language implementation as part of a 'Working Backwards' philosophy, which starts with the final product and works backwards identifying the components required to deliver the final product or service. 
+
+== Abstract
+Kingfisher is implemented as a stack-based architecture, where operations primarily manipulate a ((Last-In-First-Out (LIFO) stack)). This architectural choice provides several advantages for resource-constrained systems, wwhich are a simplified instruction set, reduced memory overhead, and straightforward implementation of control structures. The stack serves as the primary means of passing parameters between operations, eliminating the need for complex parameter passing mechanisms and register allocation strategies. This approach, combined with strong type checking and an interactive development environment, makes Kingfisher particularly well-suited for vintage computing platforms and amateur built retro systems where memory and processing resources are limited.
+
+A primary goal of Kingfisher design was to improve memory safety, and ((strong typing)) is the first element in achieving this goal, but memory allocation and bounds checking are also a high priority.
+
+* *Strong Typing* Enables the compiler to check that the correct routine is being used for the data it is handling. During compilation all data being transferred via the stack is used to determine the correct code to compile.
+
+* *Memory Allocation* The use of ((memory allocation)) is limited to types and modules, and there is no direct pointer manipulation. Template information representing variables and collections are added to the dictionary which grows upwards at compile-time. At runtime memory from the heap which grows down from the top is allocated to store the data. This approach allows code to be placed in ROM, and offers the possibility of dynamic allocation and release of memory when local variables go in and out of scope.
+
+* ((*Bounds Checking*)) Both data and code objects are stored in the dictionary. All objects include code, data objects also include the data, pointers to data and meta data, which is used to check data boundaries.
+
+include::part1.adoc[]
+include::part2.adoc[]
+include::part3.adoc[]
+include::part4.adoc[]
+include::part5.adoc[]
+include::part6.adoc[]
+
+[index]
+= Index

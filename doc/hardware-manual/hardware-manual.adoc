@@ -1,0 +1,57 @@
+= Hardware Manual
+Malcolm North, march 2025
+:doctype: book
+:title-page-background-image: image:avescat << 'EOF' > .gitignore
+# Ignore Windows Zone.Identifier files
+*:Zone.Identifier
+*Zone.Identifier
+EOF
+.png[]
+:title-logo-image: image:kingfisher.jpg[top=0.5in,align=center,pdfwidth=7in]
+:pdf-page-size: a4
+:toc:
+:sectnums:
+:sectnumlevels: 1
+:partnums:
+:chapter-signifier: Chapter
+:part-signifier: Part
+:media: prepress
+
+== Abstract
+The Aves hardware platform represents a flexible and extensible 8/16-bit computer architecture designed to bridge classic computing with modern interfaces and capabilities. Named after the taxonomic class of birds, Aves embodies both elegance and adaptability in its design.
+
+This system supports multiple processor configurations, from the classic R65C02 to the more advanced W65816, with options for dual-processor arrangements incorporating the V25, V35, Z8K and MC68K. The architecture accommodates various memory configurations, from simple linear addressing to sophisticated bank-switched and segmented memory layouts, providing up to 2MB of addressable space.
+
+At its core, Aves combines the simplicity and reliability of 8-bit systems with some of the expandability of contemporary systems. The platform features a versatile I/O subsystem built around the W65C22 VIA, supporting multiple communication protocols including I2C, SPI, and the custom Aves Serial Bus (ASB).
+
+This hardware reference manual provides comprehensive documentation of the Aves system architecture, memory configurations, bus arrangements, and interface specifications. It serves as the authoritative reference for hardware developers, system programmers, and enthusiasts working with the Aves platform.
+
+== Foreword
+The Aves hardware platform represents a thoughtful convergence of classic computing heritage and modern design principles. This project emerged from a deep appreciation for the elegant architectures of early microcomputers, particularly those from Commodore, while embracing contemporary interface standards and manufacturing techniques.
+
+In developing Aves, the preservation of the accessibility and educational value that made 8-bit systems so remarkable, was the highest priority. The result is not merely a recreation of vintage hardware, but rather a carefully considered evolution that maintains the spirit of its predecessors while offering new possibilities.
+
+This reference manual documents the technical implementation of these goals. Whether you're a hardware developer integrating Aves into a larger system, a programmer writing software for the platform, or an enthusiast exploring computer architecture, you'll find detailed information about the system's capabilities and design principles.
+
+The manual is structured to serve both as a comprehensive reference and as an educational resource. While some sections delve into complex technical details, there is a focus on clarity and practical application throughout. The included examples and explanations aim to make the material accessible without sacrificing technical accuracy.
+
+We hope this documentation helps you understand and utilise the full potential of the Aves platform, whether you're building, programming, or simply exploring this bridge between classic and contemporary computing.
+
+
+// System Architecture Overview
+include::part1.adoc[] 
+
+// CPU and Memory Systems
+include::part2.adoc[] 
+
+// Video and Sound Subsystems
+include::part3.adoc[] 
+
+// I/O and Expansion
+include::part4.adoc[] 
+
+// Implementation Details
+include::part5.adoc[] 
+
+// Aves system Models
+include::part6.adoc[] 
