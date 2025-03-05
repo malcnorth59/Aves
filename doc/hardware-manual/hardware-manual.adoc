@@ -1,12 +1,7 @@
 = Hardware Manual
 Malcolm North, march 2025
 :doctype: book
-:title-page-background-image: image:avescat << 'EOF' > .gitignore
-# Ignore Windows Zone.Identifier files
-*:Zone.Identifier
-*Zone.Identifier
-EOF
-.png[]
+:title-page-background-image: image:aves.png[]
 :title-logo-image: image:kingfisher.jpg[top=0.5in,align=center,pdfwidth=7in]
 :pdf-page-size: a4
 :toc:
