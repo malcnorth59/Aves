@@ -1,0 +1,591 @@
+= Assembly Language and System Fundamentals
+This section covers the internal structures and mechanisms used by Kingfisher for managing system types, variables, and memory. It includes details about dictionary structures, system variables, primitives, and assembly language support.
+
+== Assembly Language
+While system primitives provide low-level access to system state, assembly language support enables direct hardware control and optimisation. Assembly source code in Kingfisher integrates seamlessly with high-level constructs while maintaining safety constraints.
+
+=== Design Philosophy
+Kingfisher's assembly language implementation is guided by several core principles that align with the overall language design. The core principles of safety and correctness are paramount, it is essential that while assembly language provides direct hardware access Kingfisher's safety guarantees are maintained without introducing additional complexity. This is achieved through compile time verification of memory access, type checking of operands, and enforcement of system protection boundaries wherever possible.
+
+Explicit intent is another key principle. Unlike traditional assemblers that infer addressing modes from operand syntax, Kingfisher requires explicit specification of addressing modes. While this creates slightly more verbose code, it eliminates ambiguity and potential errors.
+
+[%unbreakable]
+--
+.Traditional vs Explicit Addressing Example
+[source]
+----
+ ; Traditional assembly - mode inferred from syntax
+  LDA #42      ; Immediate mode
+  LDA $1000    ; Absolute mode
+  
+// Kingfisher - explicit addressing modes
+  lda imm 42            // Immediate mode
+  lda abs 0x1000        // Absolute mode
+----
+--
+
+Integration with high-level language features is another fundamental aspect of the design. Assembly source code exists within the scope of code blocks which are similar to Kingfisher's Defs or methods, allowing seamless interaction with Kingfisher's type system, memory management, and error handling mechanisms. This integration extends to the expression system, which allows assembly operands to include full expressions that are evaluated at compile time. Expressions are enclosed in square brackets [ ] and can include arithmetic operations, constants, and macro expansions. 
+
+The `#` operator is used to extract individual bytes from multi-byte values, and `@` is used to calculate the position of high and low bytes in memory. The `#` operand must be in the range 0 to 3 where 0 returns the low order byte and 3 the high order byte. This approach makes it very easy to work with addresses and works consistently regardless of byte-order.
+
+Assembly language maintains consistency with Kingfisher's broader syntax conventions, which includes using `//` for comments, requiring explicit block structure, and following similar naming conventions. This consistency reduces cognitive overhead when moving between high-level and assembly source code.
+
+[%unbreakable]
+--
+.Example Expression Integration
+[source]
+----
+// Compile-time expression evaluation in operands
+  lda imm   0 # ptr      // High byte of ptr address
+  sta zp    0 @ ptr      // Store in ptr
+  lda imm   1 # ptr      // High byte of ptr address                 
+  sta zp    1 # ptr      // Store in ptr+1
+---- 
+--
+
+=== Assembly Language Core
+The core assembly language features begin with label definitions, which provide a way to name constants and addresses for use in assembly source code. Labels can be defined using literal values or expressions and serve as symbolic references throughout the enclosing Code or Method block. These labels form the foundation for writing readable and maintainable assembly source code by providing meaningful names for values and locations in memory.
+
+.Label Word
+[%header, cols="2,3"]
+|===
+|Operation |Description
+
+|( Num : ) Label name
+|Define a constant label that can be used in operands. Labels are only used during the assembly process and do not occupy memory at runtime
+|===
+
+[%unbreakable]
+--
+.Label Definition Examples
+[source]
+----
+// Example: Label definition and usage
+( : ) labelExample Method MethodName
+    Assembly
+    
+    // Define constant labels
+    0xFF Label minus-one        // Define constant -1
+    0x1000 Label screen         // Screen memory location
+    [ 40 50 + ] Label width     // Can use arithmetic in definition
+    
+    // Demonstrate label usage in code
+    lda imm minus-one           // Load 0xFF
+    sta abs screen              // Store to $1000
+    
+    // Demonstrate expressions with labels
+    lda abs [ screen width + ]  // Calculate address
+    
+    // Demonstrate address labels
+start:                          // Address label
+    lda imm 0                   // Load zero
+    beq start                   // Branch to start
+End Method
+----
+--
+
+[NOTE]
+--
+. Used during Assembly only. 
+. Zero memory footprint
+. Label directive creates named constants
+. Can use literal values or arithmetic expressions
+. Labels can be used in operands and expressions 
+. Different from regular address labels
+--
+=== Instruction Set Support
+Instruction Set Support provides comprehensive access to the complete 65xx instruction set through Kingfisher-specific syntax adaptations. The system accommodates both standard 6502 and enhanced 65C02 instructions, ensuring full compatibility across the processor family. 
+
+The design principles and syntax conventions established here are intended to extend beyond the 65xx family. Future versions of the assembler will support other classic CPU architectures including the Intel 8086, Motorola 68000, and Zilog Z8000 processor families. This extensible approach ensures consistent syntax and programming patterns across different instruction sets while maintaining the explicit addressing modes and safety guarantees that are central to Kingfisher's design.
+
+((*Instruction Set*))
+[cols="1,2,3", options="header"]
+|===
+|Mnemonic |Operation |Description
+|adc |Add with Carry |A = A + M + C
+|and |Logical AND |A = A & M
+|asl |Arithmetic Shift Left |C <- [7:0] <- 0
+|bbr0-7^C02^ |Branch on Bit Reset |Branch if M[bit] = 0
+|bbs0-7^C02^ |Branch on Bit Set |Branch if M[bit] = 1
+|bcc |Branch if Carry Clear |Branch on C = 0
+|bcs |Branch if Carry Set |Branch on C = 1
+|beq |Branch if Equal |Branch on Z = 1
+|bit |Bit Test |N = M7, V = M6, Z = A & M
+|bmi |Branch if Minus |Branch on N = 1
+|bne |Branch if Not Equal |Branch on Z = 0
+|bpl |Branch if Plus |Branch on N = 0
+|bra^C02^ |Branch Always |Branch regardless of flags
+|brk |Force Break |Push PC, Push SR
+|bvc |Branch if Overflow Clear |Branch on V = 0
+|bvs |Branch if Overflow Set |Branch on V = 1
+|clc |Clear Carry Flag |C = 0
+|cld |Clear Decimal Mode |D = 0
+|cli |Clear Interrupt Disable |I = 0
+|clv |Clear Overflow Flag |V = 0
+|cmp |Compare |A - M
+|cpx |Compare X Register |X - M
+|cpy |Compare Y Register |Y - M
+|dec |Decrement Memory |M = M - 1
+|dea^C02^ |Decrement A |A = A - 1
+|dex |Decrement X Register |X = X - 1
+|dey |Decrement Y Register |Y = Y - 1
+|eor |Exclusive OR |A = A ^ M
+|inc |Increment Memory |M = M + 1
+|ina^C02^ |Increment A |A = A + 1
+|inx |Increment X Register |X = X + 1
+|iny |Increment Y Register |Y = Y + 1
+|jmp |Jump |PC = Address
+|jsr |Jump to Subroutine |Push PC, PC = Address
+|lda |Load Accumulator |A = M
+|ldx |Load X Register |X = M
+|ldy |Load Y Register |Y = M
+|lsr |Logical Shift Right |0 -> [7:0] -> C
+|nop |No Operation |No Change
+|ora |Logical OR |A = A \| M
+|pha |Push Accumulator |Push A
+|php |Push Processor Status |Push SR
+|phx^C02^ |Push X Register |Push X
+|phy^C02^ |Push Y Register |Push Y
+|pla |Pull Accumulator |A = Pull
+|plp |Pull Processor Status |SR = Pull
+|plx^C02^ |Pull X Register |X = Pull
+|ply^C02^ |Pull Y Register |Y = Pull
+|rmb0-7^C02^ |Reset Memory Bit 0-7 |M[bit] = 0
+|rol |Rotate Left |C <- [7:0] <- C
+|ror |Rotate Right |C -> [7:0] -> C
+|rti |Return from Interrupt |SR = Pull, PC = Pull
+|rts |Return from Subroutine |PC = Pull
+|sbc |Subtract with Carry |A = A - M - !C
+|sec |Set Carry Flag |C = 1
+|sed |Set Decimal Flag |D = 1
+|sei |Set Interrupt Disable |I = 1
+|smb0-7^C02^ |Set Memory Bit 0-7 |M[bit] = 1
+|sta |Store Accumulator |M = A
+|stp^C02^ |Stop |Enter Stopped State
+|stx |Store X Register |M = X
+|sty |Store Y Register |M = Y
+|stz^C02^ |Store Zero |M = 0
+|tax |Transfer A to X |X = A
+|tay |Transfer A to Y |Y = A
+|trb^C02^ |Test and Reset Bits |M = M & !A
+|tsb^C02^ |Test and Set Bits |M = M \| A
+|tsx |Transfer SP to X |X = SP
+|txa |Transfer X to A |A = X
+|txs |Transfer X to SP |SP = X
+|tya |Transfer Y to A |A = Y
+|wai^C02^ |Wait |Enter Wait State
+|===
+
+((*Addressing Modes*))
+[cols="2,1,1,3", options="header"]
+|===
+|Mode |Addr Mode |Operand |Example
+|Immediate |imm |value |lda imm 0xFF
+|Absolute |abs |address |sta abs 0x1000
+|Zero Page |zp |address |lda zp 0x20
+|Indirect |ind |address |jmp ind 0x1000
+|Absolute X-Indexed |abs-x |address |lda abs-x 0x1000
+|Absolute Y-Indexed |abs-y |address |lda abs-y 0x2000
+|Zero Page X-Indexed |zpx |address |lda zpx 0x20
+|Zero Page Y-Indexed |zpy |address |ldx zpy 0x20
+|Indirect X |ind-x |address |lda ind-x 0x20
+|Indirect Y^C02^ |ind-y |address |lda ind-y 0x20
+|Zero Page Indirect^C02^ |zpi |address |lda zpi 0x20
+|Absolute Indexed Indirect^C02^ |abs-ind |address |jmp abs-ind|0x1000
+|===
+
+[%unbreakable]
+--
+.Kingfisher Assembly Example
+
+[source]
+----
+    // Define base address for operation
+    0x1000 Label test-base      // Starting address for clear
+    
+    // Initialize counter
+    ldy imm 0x00               // Set Y register to zero
+    
+    // Clear memory loop would follow...
+----
+--
+
+[NOTE]
+--
+ * ^C02^ indicates 65C02-specific instructions and addressing modes
+ * All addressing modes must be explicitly specified
+ * Immediate values can use calculation syntax: lda imm [ 2 4 + ]
+ * Branch instructions use absolute addressing syntax for consistency
+ * Zero page addresses must be within 0x00-0xFF range
+--
+
+=== ((Assembly Directives))
+Assembly Directives control the assembly process and data definition while managing symbol definitions and memory layout. The system includes support for executing Kingfisher words during the assembly process, providing essential control.
+
+.Data Definition Directives*
+[%header, cols="2,3"]
+|===
+|Directive|Description
+
+|byte value value 'A' 
+|Define byte(s) from numeric values or character literals
+
+|byte "text"
+|Define counted string (length byte followed by characters)
+
+|word value value
+|Define word(s) (16-bit)
+
+|long value value
+|Define long(s) (32-bit)
+
+|align boundary
+|Align to power of 2 boundary
+
+|space count
+|Reserve count bytes of space
+
+|fill count value
+|Fill count bytes with value
+
+|[
+|Execute the Kingfisher interpreter and return results to the assembler. 
+
+|]
+|Switch back to Assembly Language.
+
+|( Num Byte : Byte ) #
+|Returns byte T from the multi-byte word N
+
+|( Num Byte : Byte ) @
+|Returns the byte @ address N + T
+
+|===
+
+.Section Control
+[%header, cols="1,6"]
+|===
+
+|Directive |Description
+|code 
+|Optional: Begin code section (65xx uses unified address space)
+
+|data 
+|Optional: Begin data section (65xx uses unified address space)
+
+|z-page 
+|Begin zero page section. Address is required for system variables, otherwise space is auto-allocated
+|===
+
+=== Assembler
+The assembler in Kingfisher provides a structured framework for creating executable 
+machine code by extending the capabilities of the compiler. The assembly process uses the interpreter to find opcodes and directives in the dictionary and the executes them to compile them into the source, in much the same way as higher level source is compiled. This ability enables switching between compiler and assembler easily, allowing for integration and access to Kingfisher's vocabulary.
+
+There are two mechanisms to access assembly language. The first is the ability to create a code definition in similar way to `Def`. The second is to enable assembly in a linked method.
+
+.Assembly Language Words
+[%header, cols="2,3"]
+|===
+|Operation |Description
+
+|( : ) Assembly
+|Switches to assembly language within a method definition
+
+|( in : out ) Code name 
+|Creates a new definition and enables the Assembler
+
+|End
+|Closes the definition and switched back to the interpreter
+
+|===
+
+[%unbreakable]
+--
+.Code Block Example
+[source]
+----
+( Byte Byte -- Byte ) Code Add
+    lda zp-x 0 @ [ stack 1 + ]   // Load first parameter
+    clc                         // Clear carry
+    adc zp-x 0 @ [ stack 1 + ]   // Add second parameter
+    lda imm  0                  // high byte is zero
+    sta zp-x 1 @ [ stack 1 + ]   // Store result
+    inx                         // Adjust stack
+    rts
+End
+----
+--
+
+[%unbreakable]
+--
+.Assembly Method Example
+[source]
+----
+( Byte Byte -- Byte ) type-name Method
+    Assembly
+    //
+    lda zp-x 0 @ [ stack 1 + ]   // Load first parameter
+    clc                         // Clear carry
+    adc zp-x 0 @ [ stack 1 + ]   // Add second parameter
+    lda imm 0                   // high byte is zero
+    sta zp-x 1 @ [ stack 1 + ]   // Store result
+    inx                         // Adjust stack
+    rts
+End
+----
+--
+
+=== ((Macro Processing))
+Macro processors can be used in compilers or assemblers to abbreviates language syntax, and makes it easier to repeat complex construct consistently. Macros can also have parameters enabling programmers to create syntactic patterns that can be reused in different contexts.
+
+The Kingfisher macro processor is integrated into the compiler and assembler enabling programmers to use macros in either system.
+
+.Macro Words
+[%header, cols="2,3"]
+|===
+|Operations|Description
+
+|(:  ) Macro name 
+|Defines a new macro called name.
+
+|(%
+|Starts a macro parameter that contains spaces and other delimiters and operators
+
+|%)
+|Ends a macro parameter and stores it in the word definition
+
+|$ name macro-name
+|Passes name to macro-name
+
+|End
+|Closes the macro, switches off the macro processor and back to the Interpreter 
+
+|===
+
+[%unbreakable]
+--
+.Macro High Level Example
+[source]
+----
+// duplicate top two stack items
+(: ) Macro Dup2
+    Over Over
+End
+
+3 5 Dup2        // Results in 3 5 3 5
+----
+--
+
+[%unbreakable]
+--
+.Macro Assembly Example
+[source]
+----
+(: ) Macro SetPtr
+    lda imm     $1 0 #          // load A with low byte of parameter       
+    sta zp      ptr1 0 @        // store A in pointer low byte
+    lda imm 1   $1 1 #          // load A with high byte of parameter
+    sta sp 1    ptr1 1 @        // store A pointer high byte
+End
+
+( Byte : ) Code StoreAtPointer
+    [ addr SetPtr ]           // Pass the string addr to the macro
+    // [ (% addr %) SetPtr ]    // Alternate form
+    
+    0x20 Label ptr1
+
+    // Macro expands to
+    lda imm     addr 0 #
+    sta zp      ptr1 0 @
+    lda zp      addr 1 #
+    sta imm     ptr1 1 @
+
+    lda zp-x    [ stack 1 + ]   // load a with value on stack
+    inx                         // drop value on stack
+    sta ind-y   ptr1            // store in memory
+    rts
+End 
+----
+--
+
+== System Data Structures
+Additional controls are required to manage system variables, which includes more constructors and methods to give the variable a fixed address, and to enable creation of singletons.
+
+Singletons are declared using `Static` which uses a similar syntax to 'Type'. Unlike standard types, static types are constructed when they are defined, which limits the number of instances to one. A static instance is accessed using linked methods just like any other type.
+
+All data structures support the `Locate` method which removes a variable from the heap and locates it at a specific location. 
+
+The `Register` word is used to mark the variable as a system register and the word is allocated a position in the system register space. If locate is used with a register the address must be within the system register address space.
+
+((Locate)) and ((Register)) words must immediately follow a constructor or static definition to avoid memory fragmentation. 
+
+.System Data Constructors
+[%header, cols="2,3"]
+|===
+|Constructor|Description
+
+|( : ) Static name
+|Creates a new static type
+
+|===
+
+.System Data Words
+[%header, cols="2,3"]
+|===
+|Operations|Description
+
+|( Var : ) Locate name
+|The locate method must be used immediately after variable creation and before any other defining words are used. The named variable is moved from the heap and located at the specified address
+
+|( : ) Register name
+|The register method must be used immediately after variable creation and before any other defining words are used. The named variable is moved from the heap into the system register page.
+
+|===
+
+==== Static Type Definitions
+Static types in Kingfisher are defined using a structured template syntax that enables precise control over memory layout and field access. The static definition begins with a stack signature followed by the 'Static' keyword and a list of field definitions, terminated with End. For a detailed description of type methods, and constructors see <<Type Definitions>>.
+
+[%unbreakable]
+--
+.Static Type Definition Examples
+
+[source]
+----
+// Example type with explicit addressing
+( : ) Static chain
+    1 Var : activated
+    1 Var : extended
+    1 Var : restricted
+    1 Var : excluded
+End
+
+Register chain      // Chains are a register
+0x010 Locate chain  // ... fix them at 0x010
+
+
+// Example type with auto-increment addressing
+( : ) chain Method Activate
+    // code to activate activated chain
+End
+----
+--
+
+[IMPORTANT]
+====
+Static types trade flexibility for efficiency by allocating memory at compile time
+and eliminating constructor overhead. Regular types provide instance isolation but
+require runtime construction.
+====
+
+== Interrupts
+Interrupt handling in Kingfisher provides a mechanism for responding to external events in a timely and efficient. While powerful, it's crucial to use interrupts carefully to avoid performance degradation and system instability.
+
+=== Interrupt Handling System
+The Kingfisher interrupt handling system comprises three key components, as shown in the following table.
+
+[cols="2,3"]
+|===
+
+|System Interrupt Handler
+|The core mechanism that receives and interrupts from the CPU.
+
+|Interrupt Prioritisation
+|A system for assigning priorities to different interrupt sources, ensuring that critical events are handled promptly. Interrupt prioritisation ensures that higher priority interrupts are handled before lower priority interrupts, preventing critical events from being delayed.
+
+|Interrupt Service Routines
+|User-defined functions that are executed in response to specific interrupts. For example an ISR might handle a timer interrupt by updating a system clock, or a keyboard interrupt by reading keypresses from the input buffer.
+
+|===
+
+==== Interrupt Processing
+Interrupt processing leverages the CPUs built-in interrupt mechanism. When an interrupt occurs, the actions listed in the following table are performed.
+
+[cols="2,3"]
+|===
+
+|Interrupt Acknowledgement
+|The CPU signals an interrupt to the Kingfisher system, which responds to the interrupt at the end of the current CPU instruction and the CPU registers are saved on the system stack.
+
+|Customer Increment
+|The system interrupt handler increments an internal counter. The CPU registers are restored and execution continues.
+
+|Deferred Handling
+|The actual processing of interrupts is deferred until the end of the current definition.
+
+The deferred approach minimises the need for extensive state preservation within the interrupt handler itself. By relying on the existing stack-based parameter passing mechanism of Kingfisher, the overhead of handling interrupts is kept to a minimum. 
+
+The inner interpreter checks the interrupt counter at the end of each definition (next), and calls the interrupt processing routine only when the counter is greater than zero.
+
+|Interrupt Processing
+|The system proceeds to execute the appropriate interrupt service routines based on their priorities.
+
+|Counter Decrement
+|The interrupt counter decrements following completion of the interrupt processing routine. This mechanism ensures that interrupts are handled efficiently while minimising disruptions to the normal flow of program execution.
+
+|===
+
+[NOTE]
+This approach relies on the interrupt frequency being lower than the overall interrupt handling period. It is the responsibility of the programmer to ensure the interrupt frequency and handling period do not impact the performance of the application.
+
+==== Interrupt Management
+Interrupts are managed using a singleton object called `isr`. The following tables lists all the methods linked with the `isr` object.
+
+.ISR Methods
+|===
+|Operations|Descriptions
+
+|( Byte : ) AddHandler name
+|The word specified by name is added to the specified interrupt priority as the ISR
+
+|( Byte : ) Disable
+|Disable interrupts at teh specified priority level only. Priority 0 is all interrupts, while 1-4 are individual interrupt priorities with 1 being the highest and 4 lowest
+
+|( Enable : ) Enable
+|Enable interrupts at the specified priority level only
+
+|===
+
+[%unbreakable]
+--
+.Interrupt Example
+----
+// define a counter in register space
+Byte Counter
+counter.Register
+
+// define constants tp represent interrupt priorities
+0 Constant irq-all  // Refers to all interrupts
+1 Constant irq-p1   // Highest Priority
+2 Constant irq-p1
+3 Constant irq-p1
+4 Constant irq-p1   // Lowest Priority
+
+// Word to count 100 x 10mS events
+// Counter will roll over every 1 second
+( : ) Def Count
+    counter.get 100 =
+    If
+        counter.Reset
+    Else
+        1 counter.Add
+    End
+End
+
+// Initialis counters and interrupts
+( : ) Def InitCounter
+    // Disable all interrupts before initialisation
+    irq-p4 isr.Disable
+
+    // Reset the counter to zero
+    counter.Reset
+
+    // Initialise timer device to 10mS
+
+    // Add the Count word as the priority 4 interrupt handler
+    irq-p4 isr.Addhandler Count
+
+    // Enable priority 4 interrupts
+    irq-p4 isr.Enable
+End
+----
+--

@@ -1,0 +1,517 @@
+= Kingfisher Development
+Vintage systems, like the ones Kingfisher is targeted on, often have limited memory and processing power. This restricts the types of IDEs that can be effectively used. Traditional, resource-intensive IDEs like Visual Studio or Eclipse are not suitable for such environments.
+
+Kingfisher's architecture, inspired by Forth, encourages a functional programming approach with small, reusable functions. This aligns well with the concept of pure functions, where the output is solely determined by the input, making code more predictable and easier to maintain.
+
+The fact that Kingfisher is designed to run on systems with limited resources, such as 6502-based computers, makes performance a primary consideration, and the development tools reflect this. To address these constraints and leverage Kingfisher's strengths, Kingfisher provides a lightweight IDE built around a lightweight text editor called Talon, which includes built-in access to the REPL and automatic retention of the last three versions. Talon's design philosophy is to provide the essential tools for coding, testing, and debugging without sacrificing performance; therefore, it prioritises efficiency and responsiveness over rich visual features. For 16-bit systems or when running on emulators with sufficient resources, future versions of Talon may include optional features like token colouring, which can be enabled or disabled based on the target system's capabilities and the user's preferences. These systems typically have more processing power and memory, making such features more practical.
+
+Despite its minimalist design, Talon provides essential features for Kingfisher development, including efficient text editing with support for common vintage computer keyboard layouts and character sets, standard keyboard shortcuts, seamless integration with the Kingfisher REPL for interactive testing and debugging, and efficient CLI access for compilation, execution, and version control.
+
+These features, combined with Kingfisher's focus on small, testable functions, enable developers to write and debug code quickly and effectively, even on limited hardware.
+
+.Example Workflow
+[cols="2,5"]
+|===
+
+|Write Code
+|Write Kingfisher code in the Talon text editor, focusing on small, reusable functions.  Adhere to Kingfisher's functional programming paradigm.
+
+|Compile and Run
+|Use the Kingfisher CLI command `Load( "my-program.kf" )` to load and compile the code. Then, execute the compiled program with the `Run` command.
+
+|Test and Debug
+|Use the integrated REPL to interactively test individual definitions. Type in a Kingfisher expression and press Enter to evaluate it immediately. This allows for rapid prototyping and testing of small code units.  The REPL provides immediate feedback, allowing you to quickly identify and correct errors.
+
+|Refactor and Optimise
+|Continuously refactor the code to improve its efficiency and maintainability. Use the REPL to quickly test the impact of changes.
+
+|Remote Development
+|For target systems with limited resources, a remote development workflow is supported. Code is written and compiled locally, then deployed to the target system using the XMODEM file transfer mechanism built into the Serin terminal emulator. XMODEM is often used for its simplicity and wide availability on embedded systems, allowing development to occur on a more powerful machine while still targeting the specific hardware.
+
+|===
+
+== ((The Software Development Lifecycle)) (SDLC)
+The software development lifecycle has six phases as shown in the <<The Six Phases of the SDLC>> diagram. While the initial Plan and Design phases are not directly addressed by Kingfisher itself, the remaining four phases; Implement, Test, Deploy, and Maintain are fully supported and form the core of the Kingfisher development workflow.
+
+--
+.The Six Phases of the SDLC
+
+1. Plan -> 2. Design -> *3. Implement -> 4. Test -> 5. Deploy -> 6. Maintain*
+--
+
+=== Development Environment
+The Implementation phase of the ((SDLC)) is where Kingfisher's development environment plays a crucial role. Vintage systems, like those Kingfisher targets, often have limited memory and processing power. This restricts the types of IDEs that can be effectively used. Traditional, resource-intensive IDEs like Visual Studio or Eclipse are not suitable for such environments.
+
+Kingfisher's architecture, inspired by Forth, encourages a functional programming approach with small, reusable functions. This aligns well with the concept of pure functions, where the output is solely determined by the input, making code more predictable and easier to maintain.
+
+To address these constraints and leverage Kingfisher's strengths, Kingfisher provides a lightweight IDE built around a streamlined text editor called Talon, which includes built-in access to the Kingfisher REPL and automatic retention of the last three versions.
+
+==== Implementation
+Talon, the lightweight text editor, is the primary tool for the Implementation phase. Its minimalist design ensures efficiency on resource-constrained systems, allowing developers to focus on writing Kingfisher code without the overhead of a complex IDE.
+
+==== Testing
+The integrated REPL is essential for the Test phase. It allows developers to interactively test individual functions and code snippets, providing immediate feedback and enabling rapid prototyping. This interactive testing is crucial for verifying the correctness of Kingfisher code.
+
+==== Deployment
+The Deploy phase is facilitated by the Kingfisher CLI, providing tools for compiling and deploying code to the target hardware. For systems with limited resources, the remote development workflow, using XMODEM for file transfer, is particularly valuable.
+
+==== Maintenance
+Kingfisher's focus on small, reusable functions and its functional programming paradigm significantly aids the Maintain phase. The modularity and predictability of the code make it easier to understand, modify, and debug. The REPL can also be invaluable during maintenance for quickly testing bug fixes or new features.
+
+=== Talon IDE
+The Talon ((Integrated Development Environment)) *((IDE))* provides a lightweight yet powerful development environment specifically designed for Kingfisher systems. It balances essential features with efficient operation on vintage hardware, offering developers a complete toolkit for writing and debugging Kingfisher applications.
+
+The environment operates across three distinct modes, allowing developers to seamlessly transition between coding, debugging, and system operations. Each mode preserves screen real estate while providing necessary functionality for its specific purpose.
+
+.Core Features and Specifications
+[%header, cols="1,2"]
+|===
+|Feature|Description
+|Display Support|Flexible width support (30, 40, 50, 80, or 100 columns)
+|Editor Functions|Full-screen editing with horizontal and vertical scrolling
+|REPL Integration|Direct access to Kingfisher REPL environment
+|Version Control|Automatic retention of last three file versions
+|Status Display|Real-time line and column position information
+|Screen Layout|Configurable split-screen modes for code and debug views
+|===
+
+.Operating Modes
+[%header, cols="1,2"]
+|===
+|Mode|Function
+|Edit|Primary development interface providing 16-21 rows for code entry and modification
+|Debug|Split-screen view with 3-7 rows dedicated to debugging and REPL interaction
+|Menu|Overlay system providing access to file, edit, and system functions
+|===
+
+==== Usage
+Working with Talon follows a straightforward workflow that guides developers through the coding and testing cycle. The editor's modal design ensures that common development tasks remain accessible whilst maximising the available screen space for code editing. A typical development session progresses through editing, testing, and file management operations as shown in the following steps.
+
+--
+1. Start Talon and enter Edit mode
+2. Write or load Kingfisher code
+3. Access the menu system using the menu key
+4. Use Debug mode for testing and REPL interaction
+5. Save work frequently (File menu)
+--
+
+[NOTE]
+--
+For complete reference information including menu structure, key mappings, and 
+configuration options, see <<Talon IDE Reference>> in Part VI.
+--
+
+=== Example Application
+To demonstrate Kingfisher's development capabilities, a basic terminal emulator design has been chosen. A terminal emulator is relevant to vintage computers, as many systems from that era supported multiple asynchronous terminals and multiple users. With the advent of microprocessors, these same terminals were used to debug microprocessor-based systems. The basic dumb terminal performs two primary functions: it reads characters from an asynchronous serial port and displays them, and it reads characters from the keyboard and sends them to the serial port. The first version of the application will accomplish these tasks before being enhanced to support control characters and, eventually, a subset of ANSI terminal control sequences.
+
+[%unbreakable]
+--
+.Dumb Terminal Example
+
+.I/O Abstractions
+[source]
+----
+// Include the module supporting the serial, keyboard and screen devices
+include std-io          
+
+Use std-io              // Add it to the extended scope
+
+InputStream comIn       // Now create serial port comms. channels
+OutputStream comOut
+
+// Test if character received
+( : Flag ) Def GotCom
+    com.IsReady
+End
+
+// Read a byte from the COM port 
+( : Byte ) Def RdCom
+    comIn.Get
+End
+
+// Write a byte to the COM port
+( Byte : ) Def WrCom
+    comOut.Set
+End
+
+// Test if key available
+( : Flag ) Def GotKey
+    in.IsReady
+End
+
+// Read a byte from in 
+( : Byte ) Def RdIn
+    in.Read
+End
+
+// Write a byte to out
+( Byte : ) Def WrOut
+    out.Print
+End
+----
+--
+
+[%unbreakable]
+--
+.Main Loop
+[source]
+----
+03 Constant break-key   // break key is ^C or Stop on C64
+
+// TtyLoop
+( : Byte ) Def TtyLoop
+
+Do
+    GotKey
+    If                                  // If there is a keypress to process
+        RdIn Dup break-key = Not        // Check if the user has pressed the break key
+        If
+            WrCom                       // Send it out of the com port
+            true                        // Do not exit loop
+        Else
+            Drop                        // Get rid of break key
+            false                       // Terminate the loop
+        End
+    Else
+        true                            // Continue rest of loop
+    End
+While           
+    GotCom                              // Is there character from the Com port?
+    If  
+        RdCom WrOut                     // get the character and write to display
+    End
+End
+----
+--
+
+==== Debugging the Example
+Kingfisher's stack-based architecture and focus on small, testable functions make it particularly well-suited for this type of unit testing. Once the example has been compiled and saved as `example-1.kf` using the <<Talon Editor>> its ready to be tested. Before testing, connect a serial port from your host machine to the serial port on the Aves Nest expansion card. To test each of the ((word))s, GotCom, RdCom, WrCom, GotKey RdKey and WriteKey can be tested in the command line as shown in the following example.
+
+[%unbreakable]
+--
+.Debug Example
+[source]
+----
+" example-1.kf" Load
+
+// Start by testing the keyboard
+GotKey          // Returns False
+// Press a key 
+GotKey          // Returns True
+Drop Drop       // Clean up
+RdKey           // Returns the key value
+GotKey          // returns False
+Drop            // Clean up
+WrOut           // Print the character
+
+// Test the Serial connection
+GotCom          // Returns False
+// Send a character to the the Nest
+GotCom          // Returns True
+Drop Drop       // Clean Up
+RdCom           // Returns the received byte
+GotCom          // Returns False
+Drop            // Clean up
+WrCom           // Send the character back
+
+// Now try it all together
+TtyLoop
+
+// Send messages from the sender to the nest
+// Check they are displayed correctly on the terminal
+
+// Send messages from the terminal to the connected device
+// Check they are displayed correctly on the device
+
+// Any issues review code in the editor, modify and retest before moving on
+----
+--
+
+=== Another Example Application
+This next part of the application adds control character support to the earlier dumb terminal example. Control characters are used to mark the end of a line, move the cursor, delete characters and clear the screen. The general ASCII codes presented in the following table are taken from the ANSI terminal protocol.
+
+.General ASCII Codes
+[%header, cols="1,1,1,1,4"]
+|===
+|Name|Decimal|Hex|Key|Description
+
+|BEL
+|7
+|0x07
+|^G
+|Rings the bell or sounds a buzzer, only available on devices with audio output.
+
+|BS
+|8
+|0x08
+|^H
+|Moves back one space and erases the character under the cursor.
+
+|HT
+|9
+|0x09
+|^I
+|Moves the cursor to the next TAB stop. Set to 4 by default. Machines with TAB keys emit this code.
+
+|LF
+|10
+|0x0A
+|^J
+|Moves the cursor down one line and scroll the screen up one line if at the last row of the screen.
+
+|VT
+|11
+|0x0B
+|^K
+|Move the cursor to the top left corner of the screen
+
+|FF
+|12
+|0x0C
+|^L
+|Clears the screen and moves the cursor to the top left corner.
+
+|CR
+|13
+|0x0D
+|^M
+|Moves the cursor to column 0 of the current line
+
+|ESC
+|27
+|0x1B
+|^[
+|Escape is used to prefix a sequence of characters that provide extend capabilities. The ANSI escape sequences are documented in the <<Serin Terminal>> section of Part VI.
+
+|DEL
+|127
+|0x07F
+|<none>
+|Deletes the character under the cursor and shifts the line left one character.
+
+|===
+
+[%unbreakable]
+--
+.Enhanced Terminal Example
+[source]
+----
+// Include the module supporting the serial, keyboard and screen devices
+Include "std-io.kf"          
+
+Use std-io              // Add it to the extended scope
+
+InputStream comIn       // Now create serial port comms. channels
+OutputStream comOut
+
+// Test if character received
+( : Flag ) Def GotCom
+    com.IsReady
+End
+
+// Read a byte from the COM port 
+( : Byte ) Def RdCom
+    comIn.Get
+End
+
+// Write a byte to the COM port
+( Byte : ) Def WrCom
+    comOut.Set
+End
+
+// Test if key available
+( : Flag ) Def GotKey
+    in.IsReady
+End
+
+// Read a byte from in 
+( : Byte ) Def RdIn
+    in.Read
+End
+----
+--
+
+[%unbreakable]
+--
+.Global Variables
+[source]
+----
+Byte posX
+Byte posY
+
+( : ) Def InitPosXY
+    1 posX.Set
+    1 posY.Set
+End
+----
+--
+
+[%unbreakable]
+--
+.Control Handlers 1
+[source]
+----
+( : ) Def IncrementPosX 
+    posX.Get line-length =          // If at end of current line
+    If
+        0 posX.Set                  // go back to start of line
+        posY.Get screen-height <    // check if scrolling
+        If                        
+            1 posY.Add              // next line
+        End
+    Else
+        1 posX.Add                  // move to next position
+    End
+End
+
+( : ) DecrementPosX
+    posX.Get 0 =        // check if at beginning of a row
+    If                  // if so decrement y
+        posY 0 >        // check if at top of screen
+        If              // if not decrement y
+            1 posY.Sub  
+            line-length posX.Set    // got to end of line
+        End
+    Else
+        1 posX.Sub      // go back one position on same row
+    End
+End
+----
+--
+
+[%unbreakable]
+--
+.Control Handlers 2
+[source]
+----
+( : ) Def BackSpace
+    DecrementPosX
+    $ ' ' out.WrOut
+    DecrementPosX
+End
+
+( : ) Def Tab
+    // calculate number of spaces required 
+    posX.Get tabSize.Get % Dup 0 =
+    If                  // If zero move 4 more spaces
+        Drop tabSize.Get
+    End
+    0 Swap Range tab    // Create new range
+    For tab             // move to Tab stop
+        Drop
+        IncrementPosX
+    End
+End
+
+( : ) Def NextLine
+    posY.Get  screen-height <
+    If
+        1 posY.Add
+    End
+End
+
+( : ) Def ClearScreen
+    0 line-length screen-height 
+    Range screen
+    InitPosXY 0L out.Pos
+    For screen
+        Drop IncrementPosX
+        out.Print
+    End
+End
+----
+--
+
+[%unbreakable]
+--
+.HandleControls
+[source]
+----
+( Byte : ) Def HandleControls
+    Case
+        // Uncomment if audio available and implement RingBell
+        // BEL Of RingBell ;  
+        BS  Of BackSpace ;   
+        HT  Of NextTab ;
+        LF  Of NextLine ;
+        VT  Of 1 posX.Set 1 posY.Set ;
+        FF  Of ClearScreen ;
+        CR  Of 1 posX.Set ;
+
+        // Uncomment the below line and implement EscSequences 
+        // ESC Of EscSequences ;
+        DEL Of BackSpace ;
+        
+        // Handle Escape sequence if required
+        // ESC Of InitEsc ; 
+    End
+
+    posX.Get toLong 
+    posY.Get toLong line-length toLong * + 
+
+    // move the cursor to the correct position  
+    out.SetPos
+End
+----
+--
+
+--
+.Write to Display
+[source]
+----
+// Write a byte to out
+( Byte : ) Def WrOut
+    Dup 32B <   // Is this a control Character
+    If 
+        HandleControls  // Its a ControlChar
+    Else
+        HandleText      // It's a plain Character
+        out.Print
+    End
+End
+----
+--
+
+[%unbreakable]
+--
+.TTY Loop
+[source]
+----
+InitPosXY                                   // Initialise cursor position
+out.Pos
+// TtyLoop
+( : Byte ) Def TtyLoop
+
+    Do
+        GotKey
+        If                                  // If there is a keypress to process
+            RdIn Dup break-key = Not        // Check if the user has pressed the break key
+            If
+                WrCom                       // Send it out of the com port
+                true                        // Do not exit loop
+            Else
+                Drop                        // Get rid of break key
+                false                       // Terminate the loop
+            End
+        Else
+            true                            // Continue rest of loop
+        End
+    While           
+        GotCom                              // Is there character from the Com port?
+        If  
+            RdCom WrOut                     // get the character and write to display
+        End
+    End
+End
+----
+--
+
+[NOTE]
+--
+In our original dumb terminal example, the the input and output words were abstracted into new definitions, in this section the reason for that seemingly wasteful abstraction will become apparent. To add control codes to the emulator the following changes are required: 
+
+. Keyboard input; Check that the input words return the control characters as documented in the previous table
+. Display output; Check that the control characters do not have any effect on the screen by default.
+
+Do this using the technique described in the Debug example before continuing.
+--

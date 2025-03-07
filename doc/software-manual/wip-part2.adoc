@@ -1,0 +1,43 @@
+=== Dictionary System
+The dictionary system is the core mechanism for managing definitions in Kingfisher. It provides word lookup, definition storage, and type checking through a chain-based vocabulary system.
+
+==== Vocabularies and Chains
+Vocabularies are collections of related word definitions managed as units. The system uses four distinct chains to control word visibility and lookup:
+
+.Vocabulary Chains
+[%header, cols="1,3"]
+|===
+|Chain|Description
+|Active|Main scope for active vocabularies, used for searching and adding definitions
+|Extended|Searched before Active scope, lookup only (no new definitions)
+|Restricted|Limits word lookup to specific vocabulary
+|Excluded|Contains unused vocabularies removed from other chains
+|===
+
+==== Dictionary Operations
+The dictionary provides core operations for managing definitions:
+
+.Basic Dictionary Operations
+[%header, cols="2,3"]
+|===
+|Operation|Description
+|Create name|Creates new dictionary entry with given name and type signature
+|Find name|Searches dictionary for entry matching name
+|Forget name|Removes name and subsequent definitions from dictionary
+|Link|Links new definition with previous dictionary entry
+|Reset|Restores dictionary to initial state
+|===
+
+==== Chain Management
+Chains can be manipulated using these operations:
+
+.Chain Operations
+[%header, cols="2,3"]
+|===
+|Operation|Description
+|Activate name|Moves vocabulary to top of Activated Chain
+|Extend name|Moves vocabulary to top of Extended chain
+|Restrict name|Moves vocabulary to top of Restricted chain
+|Exclude name|Moves vocabulary to top of Excluded chain
+|Delete name|Deletes vocabulary from top of specified chain
+|===

@@ -1,0 +1,59 @@
+== Documentation Structure Guidelines
+The Kingfisher documentation format follows a structured approach with specific sections and formatting requirements.
+
+=== Opening Section
+The document begins with an introduction and smoothly transitions to the main subject matter, written in a narrative style.
+
+Constructor documentation follows on directly after the opening section using a two-column table format, sorted alphabetically by Constructor with a bold title as shown below. 
+
+All narrative should be kept ahead of the tables and examples, the exception being the use of [NOTE] if required after a table or code.
+
+==== Multiple Tables and Examples
+In some circumstances additional subheadings are required, but this should follow the same patterm with no lower than a level 4 heading. that is a section heading with narrative followed byt table(s) and examples.
+
+.Constructor Definitions
+|===
+|Constructor|Description
+
+|Constructor name with stack signature
+|Description
+|===
+
+Methods and definition follow on directly from constructors using a similar style to constructors.
+
+.Available Methods
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|Operation name with stack signature
+|Detailed explanation
+
+|===
+
+Code examples follow on from available operations in bold titles, unbreakable source code blocks. Examples should be the last item in section.
+
+[%unbreakable]
+--
+.Basic Usage Example
+[source]
+----
+code goes here
+----
+--
+
+=== Section Hierarchy
+Section headings should follow these levels:
+* Level 1: =
+* Level 2: ==
+* Level 3: ===
+* Level 4: ====
+* Beyond level 4: Use titles
+
+=== Writing Style
+The documentation should:
+
+* Use British English spelling and conventions. Continue to use program rather than programme in the context of computer software
+* Employ narrative form rather than bullet points where possible
+* Avoid short, colon-terminated sentences
+* Maintain a professional and comprehensive tone throughout

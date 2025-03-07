@@ -1,0 +1,157 @@
+Name     Aves_64K_Memory_Decoder;
+PartNo   AV650801-01;
+Date     2025;
+Revision 1.0;
+Designer Malcolm North;
+Company  None;
+Assembly Aves Computer;
+Location None;
+Device   g22v10;
+
+/*
+                ATF22V10C
+            _____    ____
+           /     \__/    \
+      vacc |1          24| Vcc
+      phi2 |2          23| ramen
+       r_w |3          22| wrb
+        a8 |4          21| nc
+        a9 |5          20| ma15
+       a10 |6          19| ram1b
+       a11 |7          18| ram2b
+       a12 |8          17| romb
+       a13 |9          16| nc
+       a14 |10         15| rdb
+       a15 |11         14| ie0
+       GND |12         13| io
+           \_____________/
+
+Inputs:
+  1  - ramen     : RAM enable (active high)
+  2  - phi2      : System clock phase 2
+  3  - r_w       : Read/Write (low = write)
+  4  - a8        : Address bit 8
+  5  - a9        : Address bit 9
+  6  - a10       : Address bit 10
+  7  - a11       : Address bit 11
+  8  - a12       : Address bit 12
+  9  - a13       : Address bit 13
+  10 - a14       : Address bit 14
+  11 - a15       : Address bit 15
+  13 - io        : I/O select (active high)
+  14 - ie0       : ROM page select
+  23 - vacc      : Video access (active high)
+
+Outputs:
+  15 - rdb       : Memory read strobe - active low
+  17 - romb      : ROM chip select - active low
+  18 - ram2b     : RAM2 chip select - active low
+  19 - ram1b     : RAM1 chip select - active low
+  20 - ma15      : EPROM expanded bank address
+  22 - wrb       : Memory write strobe - active low
+
+Power:
+  12 - GND       : Ground
+  24 - Vcc       : +5V
+
+  +------+------+------+------+------+------+------+------+
+  |Bit 7 |Bit 6 |Bit 5 |Bit 4 |Bit 3 |Bit 2 |Bit 1 |Bit 0 |
+  +------+------+------+------+------+------+------+------+
+  |ramen|  IO  |UNUSED| IE1  | IE0  |UNUSED| ME1  | ME0  | 
+  +------+------+------+------+------+------+------+------+
+*/
+
+/* Memory Map:
+ * 0x0000-0x7FFF : RAM1 (32K)
+ * 0x8000-0xFBFF : RAM2/ROM (31K)
+ * 0xFC00-0xFDFF : I/O Expansion
+ * 0xFE00-0xFEFF : Fixed I/O
+ * 0xFF00-0xFFFF : ROM (1K)
+ */
+
+
+/* *************** INPUT PINS *********************/
+PIN 1  = vacc;       /* Video access control (active high) */
+PIN 2  = phi2;       /* System clock phase 2 (active high) */
+PIN 3  = r_w;        /* Read/Write control (active low for write) */
+PIN 4  = a8;         /* Address lines 8-15 */
+PIN 5  = a9;
+PIN 6  = a10;
+PIN 7  = a11;
+PIN 8  = a12;
+PIN 9  = a13;
+PIN 10 = a14;
+PIN 11 = a15;
+PIN 13 = io;         /* I/O select (active high) */
+PIN 14 = ie0;        /* ROM bank select (active high) */
+*/
+PIN 23 = ramen;      /* RAM enable (active high) */
+
+/* *************** OUTPUT PINS ********************/
+PIN 15 = rdb;          /* Write Enable - active low */
+PIN 17 = romb;        /* ROM chip select - active low */
+PIN 18 = ram2b;       /* Upper RAM select - active low */
+PIN 19 = ram1b;       /* Lower RAM chip select - active low */
+PIN 20 = ma15;        /* ROM bank address bit */
+PIN 22 = wrb;         /* Write enable - active low*/
+
+/* *************** DECLARATIONS *******************/
+FIELD address = [a15..a8];
+
+/* Memory region definitions */
+/* 0xFF00-0xFFFF - permanent */
+rom_hole  = !vacc & a15 & a14 & a13 & a12 & a11 & a10 & a9 & a8;     
+/* 0xFE00-0xFEFF - permanent */
+io_hole_1 = !vacc &a15 & a14 & a13 & a12 & a11 & a10 & a9 & !a8;    
+
+/* 0xFC00-0xFDFF - dynamic */
+io_hole_2 = !vacc & io & a15 & a14 & a13 & a12 & a11 & a10 & !a9;    
+
+/* 0x8000-0x8FFF - dynamic */
+dpm_hole  = !vacc & io & a15 & !a14 & !a13 & !a12;                   
+
+/* *************** EQUATIONS *********************/
+
+/* ROM select active when in upper memory, not I/O space, and reading */
+romb = !(!ramen & a15 & r_w & !io_hole_1 & !io_hole_2 & !dpm_hole 
+      # rom_hole);
+
+/* Lower RAM select (0x0000-0x7FFF) */
+ram1b = !(!a15 & !vacc);
+
+/* RAM2 active for upper memory writes and non-ROM/IO reads */
+ram2b = !(ramen & !io_hole_1 & !io_hole_2 & !dpm_hole)
+        # !(!vacc & !ramen & a15 & !r_w)
+        # !rom_hole
+        # vacc;
+
+/* Memory address bit 15 control */
+ma15 = ramen & a15 & ie0 & !rom_hole & !io_hole_1 & ! io_hole_2 & !dpm_hole;
+
+/* Write enable strobe */
+wrb = !(phi2 & !r_w);
+
+/* Read enable strobe */
+rdb = !(phi2 &  r_w);
+
+TEST_VECTORS ([vacc phi2 r_w a8..a15 io ie0 ramen] => [rdb romb ram2b ram1b ma15 wrb])
+
+/* ROM access */
+[0 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 0 1 1 0 1]; /* ROM read bank 0 */
+[0 1 1 1 1 1 1 1 1 1 1 0 1 0] => [1 0 1 1 1 1]; /* ROM read bank 1 */
+[0 1 0 1 1 1 1 1 1 1 1 0 0 0] => [0 1 0 1 0 0]; /* ROM write-through */
+
+/* RAM access */
+[0 1 1 1 1 0 0 0 0 0 0 0 0 0] => [1 1 1 0 0 1]; /* Low RAM read */
+[0 1 0 1 1 0 0 0 0 0 0 0 0 0] => [0 1 1 0 0 0]; /* Low RAM write */
+[0 1 1 1 1 0 0 0 0 0 1 0 0 0] => [1 1 0 1 0 1]; /* High RAM read */
+[0 1 0 1 1 0 0 0 0 0 1 0 0 0] => [0 1 0 1 0 0]; /* High RAM write */
+
+/* I/O and DPM regions */
+[0 1 1 1 0 1 1 1 1 1 1 0 0 0] => [1 1 1 1 0 1]; /* Fixed I/O 0xFE00 */
+[0 1 1 1 1 0 0 1 1 1 1 1 0 0] => [1 1 1 1 0 1]; /* Exp I/O 0xFC00 */
+[0 1 1 0 0 0 0 0 0 1 1 1 0 0] => [1 1 1 1 0 1]; /* DPM 0x8000 */
+
+/* Video access */
+[1 1 1 1 1 1 1 1 1 1 1 0 0 0] => [1 1 0 1 0 1]; /* VACC ROM */
+[1 1 1 1 1 0 0 0 0 0 0 0 0 0] => [1 1 0 1 0 1]; /* VACC RAM */

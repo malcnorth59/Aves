@@ -1,0 +1,1311 @@
+= Language Fundamentals
+Kingfisher provides robust mechanisms for organising code and managing program execution. These mechanisms include modules, includes, and comprehensive scope management that together create a flexible yet controlled environment for program development and execution.
+
+== Program Organisation
+The primary mechanism for organising programs are vocabularies. Vocabularies are the fundamental containers used to organise and manage words. These containers are stacked, with upper vocabularies taking precedence over those below. This stacking mechanism enables temporary shadowing of names while maintaining access to the broader program structure, supporting local definitions within methods, type-specific operations, and control structure scoping.
+
+=== Bootstrap
+Program initialisation forms the foundation of any programming language implementation. Kingfisher's bootstrap mechanism provides a clear and consistent way to start program execution, ensuring proper system initialisation and module loading while maintaining strong typing and scope management. 
+
+==== Bootstrap Operations
+The ((bootstrap)) operations provide mechanisms to initialise programs in Kingfisher. These operations handle program loading, execution, and automatic startup configuration. Programs must begin with a program declaration, which is a header containing program entry points and address location information.
+
+The load process uses the information in the header to update system variables before execution begins.  
+
+.Bootstrap Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : ) Auto name
+|Configures the existing definition, definition-name to run automatically at system startup. definition-name can be a loader, runner or definition in a ROM 
+
+|( Var : ) Deregister name 
+|Removes the program header at the specified address from the current vocabulary. 
+
+|( Var Var : ) Header name
+|Creates a relocation header for a program image to be loaded at address N, and with an execution address of T
+
+|( : ) Load( "filename" [name] ) 
+|Clears the current program and loads a new program from the specified file into memory. An optional header can be specified in name, to ((load)) the program to a specific location
+
+|( : ) New
+|The vocabulary for the current programs and all of its contents are deleted. Any vocabularies created since the program was loaded will also be deleted
+
+|( : ) Program( program-name entry-point )  
+|Program must be used at the top of a ((program)) file to create a new vocabulary for the program and set the entry point
+
+|( : ) Run
+|Executes the currently registered program
+
+|( : ) Save( "filename" [header] ) 
+|((Save))s the binary representation of the program to the specified file preceded by the specified header (optional). If the header is ommited the program is saved at the default memory location
+
+|===
+
+[%unbreakable]
+--
+.Bootstrap Examples
+[source]
+----
+// Set program name at top of file
+"Calculate" Program< Calculator      
+
+// program code
+// -----------------------------------
+
+// Clear the current program (Optional)
+New
+
+// Load the calculator program
+Load( "calculator.kf" )       
+
+// Execute the current program
+Run
+
+( : ) Def LoadRun
+    // Load the calculator program
+    Load( "calculator.kf" )
+    
+    // Execute the current program
+    Run
+    
+// Set LoadRun to execute at boot
+Auto LoadRun
+--
+
+=== Vocabularies and Chains
+Vocabularies are collections of related word definitions that can be managed as a unit. They provide a way to organise and control access to definitions, similarly to modules but with more dynamic control. Chains are ordered lists of vocabularies that determine how words are found during program execution.               
+
+==== Chains
+The chain system manages word lookup and visibility through four distinct chains, as shown in the <<Vocabulary Chains>> table. 
+
+The chain system uses a singleton object to manage an ordered collection of vocabularies. The object's linked methods are shown in the <<Chain Operations>> table.
+
+.Vocabulary Chains
+[%header, cols="1, 3"]
+|===
+|Chain|Description
+
+|Active
+|The main scope for active vocabularies. Used for both searching existing words and adding new word definitions.
+
+|Extended
+|Searched before the Active scope. Used for word lookups only; new definitions are always added to the Active scope.
+
+|Restricted
+|Used for limiting word lookup to a specific vocabulary.
+
+|Excluded
+|Contains vocabularies that are no longer being used, and have been removed from other chains.
+|===
+
+.Chain Methods
+[%header, cols="2,4"]
+|===
+|Operation |Description
+
+|( : ) Activate name 
+|Moves the vocabulary at the top of the specified chain to the top of the Activated Chain
+
+|( : ) Extend name
+|Moves the vocabulary at the top of the specified chain to the top of the Extended chain
+
+|( : ) Restrict name
+|Moves the vocabulary at the top of the specified chain to the top of the restricted chain
+
+|( : ) Exclude name
+|Moves the vocabulary at the top of the specified chain to the top of the Excluded chain
+
+|( : ) Delete name
+|Deletes the vocabulary from the top of the specified chain
+
+|===
+
+==== Vocabularies
+A vocabulary is a named collection of word definitions. Vocabularies are used with chains to control word visibility.
+
+.Vocabulary Constructor
+[%header, cols="2,3"]
+|===
+|Operation |Description
+
+|( : ) Vocabulary name
+|Creates a new vocabulary with the given name
+
+|===
+
+[%unbreakable]
+--
+.Vocabulary Example
+[source]
+----
+// Create new vocabulary at the top of the active chain
+Vocabulary MyWords
+
+// Move vocabulary between chains
+chain.Exclude Active        // Excludes MyWords
+chain.Activate Excluded     // Activates MyWords
+chain.Extend Active         // Extends MyWords
+chain.Restrict Extended     // Restricts MyWords
+chain.Delete Restricted     // Delete MyWords
+----
+--
+
+=== Modules
+((Modules)) provide the primary organisational structure in Kingfisher, allowing code to be organised into reusable, self-contained units. Each ((module)) creates its own scope, preventing naming conflicts between different parts of a program.
+
+.Module Words
+[%header, cols="2,3"]
+|===
+|Operation |Description
+
+|( : ) End 
+|Marks the end of the vocabulary and excludes it
+
+|( String : ) Include 
+|Compiles contents from the specified file into the current module, which can be overridden by a module statement in the included file
+
+|( : ) Module name 
+|Creates a new module with the given name
+
+|( : ) Use name 
+|Adds the named vocabulary to the extended list. The named vocabulary must currently be in the excluded list
+
+|===
+
+[%unbreakable]
+--
+.Module Example
+[source]
+----
+// Define new module
+Module calculator   
+
+    // Module content
+    ( Num Num : Num ) Def Add
+        +
+    End
+
+    ( Num Num : Num ) Def Subtract
+        -
+    End
+End
+
+"calculator.kf" Include     // Includes the contents
+
+// Accessing words defined in modules
+calculator/Add
+
+// Add module to context temporarily
+Use calculator              // Add calculator to the extended chain
+    Add
+End                         // moves calculator back to the extended chain
+----
+--
+
+=== Aliases
+((Aliases)) provide alternative names for existing words. They create a new reference to an existing definition within the specified scope. When creating an ((alias)), the source name must already exist, and the new alias name must be unique within the specified scope. Aliases preserve all properties of their source and can be used anywhere the source can be used. It is not possible to create aliases of aliases, as this would create indirect references that could become invalid.
+
+.Alias Word
+[%header, cols="2,3"]
+|===
+|Operation |Description
+
+|( String : ) Alias name
+|Creates a new reference named 'name' pointing to the word on the stack
+
+|===
+
+[%unbreakable]
+--
+.Alias Example
+[source]
+----
++ Alias Add     // Plus now refers to Add
+3 4 Add         // Same as 3 4 +
+
+// Create type alias
+Number Alias Integer            // Integer now refers to Number type
+
+Module test
+    Var testVar
+End
+
+"test/testVar" Alias testVar   // Module Alias
+----
+--
+
+=== Scope and Lifetime Rules
+The scope and lifetime of declarations in Kingfisher are determined by where they are defined in the program. There are three main scoping levels to consider: global scope for system-wide declarations, module-level scope for module-wide declarations, and definition-level scope for local variables and temporary storage. This scoping system provides a clean and predictable environment for managing names and storage while maintaining flexibility across global, module-wide and local definitions, ensuring clear visibility rules and predictable memory management.
+
+==== Global Scope
+Declarations in global scope are visible throughout the entire program, regardless of module boundaries. The global scope contains system vocabularies that provide core functionality, global constants that can be accessed from any module, and all definitions imported from modules.
+
+==== Module Level Scope
+Module level scope contains declarations that are visible throughout a single module. this includes word definitions, type definitions, constants, and aliases defined within the module. These declarations are accessible to all words within the module, and are available to other modules using the name/word-name fully qualified name, or imported via the Use word. This mechanism provides a clean namespace for module-specific functionality while preventing unintended name conflicts between modules.
+
+==== Definition-Level Scope
+Local variables and temporary storage exist only within their defining word. this localised scope ensures clean variable management by automatically cleaning up storage when a word completes, provides predictable memory usage through clear allocation and deallocation points, and protects against naming conflicts by keeping variables isolated within their defining word.
+
+[%unbreakable]
+--
+[source]
+----
+10W Constant value      // Global Value
+
+Module example
+    // Define a word to calculate the square of a number
+    ( word : Word ) Square
+        Word result      // Local variable
+
+        Dup *           // Temporary stack values
+        result.Set      // Store in local variable
+        result.Get      // Retrieve local value
+    End
+    
+    // Test the Square word
+    ( : ) Test
+        value Square    // Calculate the square of value
+        result.Get      // Error: Unknown word
+    End
+End
+----
+--
+
+=== Error Handling
+Errors are generated by `err-code Raise`, which can be caught using a surrounding `OnError Catch` block or by referencing the `err` object.
+
+.Error Handling Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : ) Catch
+|Marks the beginning of the error exception handler
+
+|( : ) End
+|Resets the system error variable and exception handler, then resumes execution.
+
+|( : ) OnError
+|Starts an error handling block, by setting the exception handler to point to the upcoming `Catch` word
+
+|( Byte : ) Raise
+|Sets the system error variable to the value of T and raises an exception
+
+|===
+
+[NOTE]
+Error handling can be found in later sections, and can only be used inside a defining word, see sections <<Definitions>> and <<Linked Methods>> for more information on defining words.
+
+== Type Definitions and Linked Methods
+In Kingfisher, user defined types and their linked methods work together to create objects that manage and protect data through a controlled interface. At the heart of each type is a data schema that defines the structure's fields, while linked methods provide the sole mechanism for accessing this data. this approach ensures data integrity by making all fields private, with access permitted only through the type's methods. These methods operate using a specialised vocabulary containing the primitives needed for field access. When declaring a type instance, the final size can be specified, providing flexibility in memory allocation.
+
+Creating a type involves three distinct phases, each operating within its own scope and providing access to specific words needed for that particular stage. The process begins with defining the data schema, which establishes the structure and layout of the type's fields. Once the schema is complete, linked methods are created to provide controlled access to these fields, implementing the type's behaviour and ensuring data integrity. Finally, the type is instantiated, allocating memory and initialising the data structure for use.
+
+=== Type Definitions
+Types are defined in three categories: Scalar, ShortSeq, and Sequence. Each category has its own construction mechanism, and they all support linked methods, which are in a scope that is linked to the type entry.
+
+.Type Definition Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : ) Scalar name
+|Creates a new Scalar type called name, and extends the scalar-type vocabulary
+
+|( Byte : ) ShortSeq name
+|Creates a new ShortSeq type called name and extends the short-seq-type vocabulary
+
+|( Var : ) Sequence name
+|Creates a new Sequence type called name and extends the seq-type vocabulary
+
+|===
+
+.Scalar Vocabulary Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Byte : ) : name
+|Compiles the size T into the definition for the field name
+
+|( : ) End
+|Completes the type definition and excludes the scalar-type vocabulary
+
+|===
+
+.ShortSeq Vocabulary Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Byte Byte : ) : name
+|Compiles the size N and type T into the definition for the field name
+
+|( : Byte ) Byte
+|Returns the size of Byte (1)  
+
+|( : ) End
+|Completes the type definition and excludes the short-seq-type vocabulary
+
+|( : Byte ) Long
+|Returns the size of Long (4)
+
+|( : Byte ) Sword
+|Returns the size of Sword (3)
+
+|( : Byte ) Var
+|Returns the size of Byte (2,3 or 4 dependent on CPU architecture )
+
+|( : Byte ) Word
+|Returns the size of Byte (2)
+
+|( : Byte ) Byte
+|Returns the size of Byte (1)
+
+|===
+
+.Sequence Vocabulary Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Var Byte : ) : name
+|Compiles the size N and type T into the definition for the field name
+
+|( : Byte ) Byte
+|Returns the size of Byte (1)  
+
+|( : ) End
+|Completes the type definition and excludes the sequence-type vocabulary
+
+|( : Byte ) Long
+|Returns the size of Long (4)
+
+|( : Byte ) Sword
+|Returns the size of Sword (3)
+
+|( : Byte ) Var
+|Returns the size of Byte (2,3 or 4 dependent on CPU architecture )
+
+|( : Byte ) Word
+|Returns the size of Byte (2)
+
+|( : Byte ) Byte
+|Returns the size of Byte (1)
+
+|===
+
+[%unbreakable]
+--
+.Type Definition Examples
+[source]
+----
+// definition for Qword
+( : ) Qword
+    8 : value
+End
+
+( : ) Scalar 
+// Fixed size small FIFO
+( : ) Scalar FiFo
+    1 Byte : rxPtr      // FIFO receive pointer
+    1 Byte : txPtr      // FIFO transmit pointer
+    256 Byte : buffer   // Circular buffer
+End
+
+// Variable size small FIFO
+( Byte : ) ShortSeq Fifo
+    1 Byte : rxPtr      // FIFO receive pointer
+    1 Byte : txPtr      // FIFO transmit pointer
+      Byte : buffer     // Circular buffer
+End
+----
+--
+
+=== Linked Methods
+Linked Methods provide a safe and uniform way to access the data fields. They are defined similarly to word definitions but are bound to a specific type. The syntax follows the pattern `stack-signature name Method method-name`, creating a new word that is linked to the specified type.
+
+When creating a linked method, the system follows a precise sequence. First, it parses the stack signature and validates the type name. Then it creates a new dictionary entry and establishes the link between the method and its type. A new method scope is opened, allowing the compiler to process the word list. Finally, the scope is closed, completing the method definition.
+
+=== Type Field Vocabulary
+Kingfisher provides a minimal but powerful vocabulary for accessing and manipulating type fields within methods. this vocabulary leverages compile-time polymorphism to ensure both safety and efficiency. Field access is resolved at compile time, eliminating runtime type checking overhead while maintaining type safety. The vocabulary includes operations for type interpretation and bulk operations that make use of field size information available at compile time.
+
+.Type Field Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( g1 : Scalar ) As name
+|Changes type interpretation of value to named type
+
+|( Var : Byte ) Field name
+|Transforms base address to address and length of named field
+
+|( Var : Var Var ) Field name
+|Transforms base address to address and length of named field
+
+|( Var : Byte ) Size name
+|Returns the size of the names type in bytes
+
+|( : Var ) this
+|Returns the base address of the current object in the heap
+
+|===
+
+[NOTE]
+Additional memory access words are defined in <<System Primitives>>
+
+[%unbreakable]
+--
+.Linked Methods Example
+[source]
+----
+// Variable length buffer type
+( Var Byte : ) Sequence Buffer
+    // Current length
+    1 Var   : length
+    
+    // Variable length data
+    Byte    : data
+End
+
+// Get current length
+( : Var ) Buffer Method Length     
+    // get the address of the field
+    this Field length Drop      
+    // Get the length field using primitives
+End
+
+// Set new length
+( Byte : ) Buffer Method SetLength  
+    // get the address of the field
+    this Field length Drop      
+    // Set the buffer length field using primitives    
+End
+
+// Get data as Array
+( : ByteArray ) Buffer Method Data  
+    // 
+    this Field data Drop
+
+    // Tell the compiler return type
+    As ByteArray
+End
+
+// Store string in buffer
+( String : ) Buffer Method SetString 
+    // Get buffer address
+    this Field data
+    // Copy string into buffer
+End
+----
+--
+
+==== Constructors and Destructors
+Construction and Destruction is automatic. Types can define Initialise and Terminate methods that will be called after construction and before destruction respectively.
+
+[%unbreakable]
+--
+.Initialisation and Termination Examples
+----
+( : ) TypeName Method Initialise
+    // Called after construction
+    // Set up initial state
+End
+
+( : ) TypeName Method Terminate
+    // Called before destruction
+    // Clean up resources
+End
+----
+--
+
+==== Method Execution
+Methods are accessed using dot notation, where the instance name and method name are separated by a dot (instance-name.method-name). When executing a method, the interpreter first separates the instance name from the method name. It then locates the appropriate instance scope and finds the method within that scope. Finally, it executes the compiled code associated with the method.
+
+[%unbreakable]
+--
+.Type Field Examples
+[source]
+----
+( Var : ) Type Buffer
+    1 Var : length  // Buffer length             
+    Byte  : data    // Variable length data    
+End
+
+( StrSlice Byte : ) Buffer Method Copy
+    // Get data field size and address
+    this Field data     
+    
+    // Clip the length to be copied
+    Raw Min
+    
+    // Copy the data from slice  into field
+End
+
+// Constructor to fill buffer with zero
+( : ) Buffer Method Create
+    // Get data field size and address
+    0x00 this Field data     
+    
+    // Fill the field with zero
+End
+----
+--
+
+=== Datasets
+A dataset is an immutable collection of different data types, for example a dataset can be used to represent reference data containing mixed text, numeric and boolean data. The dataset is made up of variable length tuples and can read as an iteration, or via a numeric index.
+
+.Dataset methods
+[%header, cols="2,3"]
+|===
+
+|Operation|Description
+
+|( : ) Dataset name
+|The data set constructor defines a new data set with the specified name
+
+|( : ) (
+|Starts the definition of a new record within the dataset
+
+|( : ) )
+|End the record definition
+
+|( : ) End
+|Ends the dataset definition
+
+|( : Flag ) IsLast
+|Returns true if the last value was returned from the end of the iteration
+
+|( Byte : any ) GetItem
+|Returns the value of the item number specified in T
+
+|( : Scalar ) Next
+|Returns the next record from the dataset
+
+|( : ) First
+|Returns the first record from the dataset
+
+|===
+
+[%unbreakable]
+--
+.Dataset example
+----
+Dataset NameAndAddress
+    // Raffle price winners
+    ( "John Smith" 101 "01234567890" )  // Name, ticket number and phone number
+    ( "Jane Doe" 235 "09876543210" )
+End
+----
+--
+
+== Control Flow
+Kingfisher program execution is controlled with Branching and Looping commands. Both branches and loops require the ability to test for the correct conditions before a decision on which instruction will be executed next using conditional operators as described in the following section.
+
+== Boolean Operations
+In Kingfisher, rather than having a large number of boolean operators as primitive operations, you can use `And`, `Or` and `Not` in combination with the language's basic comparison operators (like <, >, =) to produce Xor, Nand, Nor etc. These derived boolean operators allow you to perform logical operations in your programs.
+
+.Boolean Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Flag Flag : Flag ) And
+|Returns the result of N And T 
+
+False And False => False +
+False And True => False +
+True And False => False +
+True And True => True
+
+|( Flag Flag : Flag ) Or
+|Returns the result of N Or T
+
+False Or False => False +
+False Or True => True +
+True Or False => True +
+True Or True => True
+
+|( Flag : Flag ) Not
+|Returns Not T
+
+True => False +
+False => True
+
+|===
+
+[%unbreakable]
+--
+.Example
+[source]
+----
+// Definition signature: takes 2 flags, returns 1 flag
+( Flag Flag : Flag ) Def Xor    
+    // Duplicate top 2 values and AND them
+    Over Over And   
+    
+    // Duplicate top 2 values and OR them
+    Over Over Or
+    
+    // AND the results and NOT the final result
+    And Not
+End
+
+// True   (different values => true)
+True False Xor
+
+// True   (different values => true)
+False True Xor   
+
+// False  (same values => false)
+False False Xor
+
+// False  (same values => false)
+True True Xor
+----
+--
+
+[%unbreakable]
+--
+.Boolean Combinations Examples 1
+[source]
+----
+// Basic Combinations
+( Flag Flag Flag : Flag ) Def AndWithNot
+    // NOT first flag, AND with second flag
+    Not Swap And    
+End
+
+( Flag Flag : Flag ) Def OrWithNot
+    // NOT both flags, then OR them
+    Not Swap Not Or 
+End
+
+( Flag Flag Flag : Flag ) Def MultiAnd
+    // AND all three flags
+    And And
+End
+
+( Flag Flag Flag : Flag ) Def MultiOr
+    // OR all three flags
+    Or Or
+End
+----
+--
+
+[%unbreakable]
+--
+
+.Boolean Combinations Examples 2
+[source]
+----
+// Common Boolean Patterns
+( Flag Flag : Flag ) Def Nand
+    // AND the flags, then NOT the result
+    And Not
+End
+
+( Flag Flag : Flag ) Def Nor
+    // OR the flags, then NOT the result
+    Or Not
+End
+
+( Flag Flag : Flag ) Def Implies
+    // NOT first flag, OR with second flag
+    Not Swap Or  
+End
+----
+--
+
+[%unbreakable]
+--
+.Example Usage
+[source]
+----
+// Example usage:
+True False True AndWithNot  // False
+True False OrWithNot        // True
+True True True MultiAnd     // True
+False True False MultiOr    // True
+
+True True Nand              // False
+True False Nand             // True
+False True Nor              // False
+True False Implies          // False
+----
+--
+
+=== Conditional Operations
+Kingfisher provides three fundamental conditional operators (<, >, =) that form the basis for all comparison operations. Each operator consumes two values from the stack and returns a flag. These basic conditional operators can be combined to create more complex comparisons. Common programming patterns like range checks, equality comparisons, and boundary tests can all be constructed from these fundamental operations.
+
+.Conditional Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Num Num : Flag ) <
+|Result is true if N is less than T +
+
+3 < 5 => True +
+5 < 3 => False +
+3 < 3 => False
+
+|( Num Num : Flag ) >
+|Result is true if N is greater than T
+
+3 > 5 => False +
+5 > 3 => True +
+3 > 3 => False
+
+|( Num Num : Flag ) =
+| Result is true if N is equal to T
+
+3 = 5 => False +
+5 = 3 => False +
+3 = 3 => True
+
+|===
+
+[%unbreakable]
+--
+.Range Checks
+[source]
+----
+// Definition to check if value is between bounds (exclusive)
+( Var Var Var : Flag ) Def Between
+    // Stack: (low x high -- flag)
+    Swap Over >     // low > x
+    Rcw Rcw <       // x < high
+    And             // Combine conditions
+End
+
+// Definition to check if value is between bounds (inclusive)
+( Var Var Var : Flag ) Def BetweenInc
+    // Stack: (low x high -- flag)
+    Swap Over 1 - > // (low-1) > x
+    Rcw Rcw 1 + <   // x < (high+1)
+    And             // Combine conditions
+End
+
+// Definition to check if value is outside range
+( Var Var Var : Flag ) Def Outside
+    // Stack: (low x high -- flag)
+    Swap Over <     // low < x
+    Rcw Rcw >       // x > high
+    Or              // Combine conditions
+End
+----
+--
+
+[%unbreakable]
+--
+.Example Usage
+[source]
+----
+1 5 10 Between      // True  (1 < 5 < 10)
+1 1 10 Between      // False (1 not < 1)
+0 5 100 BetweenInc  // True  (0 <= 5 <= 100)
+0 0 100 BetweenInc  // True  (0 <= 0 <= 100)
+1 0 10 Outside      // True  (0 < 1 OR 0 > 10)
+1 5 10 Outside      // False (5 is within range)
+----
+--
+
+[%unbreakable]
+--
+.Equality Comparison Example
+[source]
+----
+// Definition for not-equal comparison
+( Scalar Scalar : Flag ) Def NotEqual
+    =              // Check equality
+    Not            // Invert result
+End
+----
+--
+
+[%unbreakable]
+--
+.Boolean Comarison Examples
+[source]
+----
+5 3 NotEqual       // True  (5 != 3)
+4 4 NotEqual       // False (4 != 4)
+
+// Multiple equality comparisons
+5 5 = 3 3 = And    // True  (5=5 AND 3=3)
+5 5 = 3 4 = And    // False (5=5 AND 3=4)
+5 6 = 3 3 = Or     // True  (5=6 OR 3=3)
+5 6 = 3 4 = Or     // False (5=6 OR 3=4)
+----
+--
+
+[%unbreakable]
+--
+.Complex Conditions
+[source]
+----
+// Check if array index is valid (0 <= i < size)
+( Var Var : Flag ) Def ValidIndex  // (i size -- flag)
+    Over 0 >       // i > -1
+    Swap Over <    // i < size
+    And            // Combine conditions
+End
+----
+--
+
+[%unbreakable]
+--
+.Examples
+[source]
+----
+// True  (0 is valid index when size is 10)
+0 10 ValidIndex    
+
+// True  (5 is valid index when size is 10)
+5 10 ValidIndex
+
+// False (10 is not valid index when size is 10)
+10 10 ValidIndex
+
+// False (-1 is not valid index when size is 10)
+-1 10 ValidIndex
+----
+--
+
+[%unbreakable]
+--
+.Other Cpmparison Pattern Examples
+[source]
+----
+// Definition for less than or equal
+// (n limit -- flag)
+( Var Var : Flag ) Def LessEqual
+    1 +     // Increment limit by 1
+    <       // Compare with adjusted value
+End
+
+// Definition for greater than or equal
+// (n limit -- flag)
+( Var Var : Flag ) Def GreaterEqual 
+
+    1 -     // Decrement limit by 1
+    >       // Compare with adjusted value
+End
+
+// Definition for inclusive range check
+// (n low high -- flag)
+( Var Var Var : Flag ) Def InRange
+    Rcw           // Get n to middle
+    Over          // Copy low
+    1 - >         // n > (low-1)  [>= low]
+    Rcw Rcw       // Get high to top
+    1 + <         // n < (high+1) [<= high]
+    And           // Combine conditions
+End
+----
+--
+
+[%unbreakable]
+--
+.Examples
+[source]
+----
+5 5 LessEqual     // True  (5 <= 5)
+6 5 LessEqual     // False (6 <= 5)
+4 5 LessEqual     // True  (4 <= 5)
+
+5 5 GreaterEqual  // True  (5 >= 5)
+6 5 GreaterEqual  // True  (6 >= 5)
+4 5 GreaterEqual  // False (4 >= 5)
+
+5 1 10 InRange    // True  (1 <= 5 <= 10)
+1 1 10 InRange    // True  (1 <= 1 <= 10)
+10 1 10 InRange   // True  (1 <= 10 <= 10)
+0 1 10 InRange    // False (1 <= 0 <= 10)
+11 1 10 InRange   // False (1 <= 11 <= 10)
+----
+--
+
+=== Error Handling
+Errors are generated by `err-code Raise`, which can be caught using a surrounding `OnError Catch` block or by referencing the system error object.
+
+.Error Methods
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : ) code
+|Returns the current error code
+
+|( : ) message
+|Returns the error message associated with the current error code
+
+|( : ) Clear
+|Clears the error code
+
+|===
+
+.Error Handling Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : ) Abort
+|Exits the interpreter printing an error message
+
+|( : ) Catch
+|Marks the beginning of the error exception handler
+
+|( : ) End
+|Resets the system error variable and exception handler, then resumes execution.
+
+|( : ) OnError
+|Starts an error handling block, by setting the exception handler to point to the upcoming Catch word
+
+|( Byte : ) Raise
+|Sets the system error variable to the value of T and raises an exception
+
+|===
+
+[%unbreakable]
+--
+.Error Handling Example
+[source]
+----
+// Divide by zero
+( Word Word : Word ) Divide
+    OnError
+        /
+    Catch
+        // Get the error code
+        // Test for divide by zero
+        error.code err-div0 =  
+        If 
+            // Print Error message
+            error.message Print
+        Else
+            Abort
+        End
+    End
+End
+----
+--
+
+[NOTE]
+'err-div0' is an example identifier for the Divide by zero error code, consult the <<Error Message Reference>> for correct values
+
+=== Branching
+There are two types of Branch: `condition If true-actions Else false-actions End` and `value Case value match-value Of of-actions ; Else of-actions ; End`
+
+==== If, Else, End
+Kingfisher provides conditional branching through the `If...Else...End` construct. this structure allows programs to execute different code blocks based on boolean conditions. The If block is always executed when the condition is true, while the optional Else block is executed when the condition is false.
+
+.If Branch Operations
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Flag : ) If
+|Continues execution if flag is true. Branches if false
+
+|( : ) Else
+|Optional target for branch from if
+
+|( : ) End
+|Target for the branch from If when Else is not present. End is always executed.
+
+|===
+
+[%unbreakable]
+--
+.If Branch Examples
+[source]
+----
+// Check if number is positive
+( Var : ) Def CheckPositive
+    String( pos "Positive" )
+    String( neg "Negative")
+    
+    0 >                
+    If
+        pos.Get Print    
+    Else
+        neg.Get Print
+    End
+End
+
+// Check if equal to specific value
+( Var : ) Def CheckTen
+    String( result "Equal to 10")
+
+    10 =             
+    If
+        result.Get Print  
+    End
+End
+----
+--
+
+[%unbreakable]
+--
+.If Usage Examples
+[source]
+----
+5 CheckPositive     // Prints: Positive
+-3 CheckPositive    // Prints: Non-positive
+5 CheckTen          // No output
+10 CheckTen         // Prints: Equal to 10
+----
+--
+
+==== Case, Of, Else, End
+The Case structure provides a way to match a Byte value against multiple values and execute corresponding code blocks. When a match is found, the associated block is executed. If no matches are found, the optional Else block is executed. Each case must be a value between 0-255.
+
+Each case begins with an Of and ends with a `;`, all words in between '`Of' and `;` are executed if the `Case` value matches the `Of` value. An optional `Else` clause captures any unmatched cases.
+
+.Case Branch Operations
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Byte : ) Case
+|Opens the `Case` and matches Number with the following `Of` clauses
+
+|( Byte : ) Of
+|Use 1 or more 'Of'. Matches number with the `Case` value and continues if equal. Branches to next `Of` if false 
+
+|( : ) ;
+|Ends the `Of` clause and branches to `End`
+
+|( : ) Else
+|Optional clause executed if none of the preceeding of clauses matched
+
+|===
+
+[%unbreakable]
+--
+.Examples
+[source]
+----
+// Days in month example
+( Byte : ) Def MonthDays
+    String( days31 "has 31" )
+    String( days28 "has 28" )
+    String( invalid "is an invalid month")
+
+    Case
+        1B Of            // January
+            days31.Get Print
+        ;
+        2B Of            // February
+            days28.Get Print
+        ;
+        3B Of            // March
+            days31.Get Print
+        ;
+    Else
+            " Invalid" Print
+    End
+End
+----
+--
+
+[%unbreakable]
+--
+.Examples
+[source]
+----
+1B MonthDays         // Prints: has 31 days
+2B MonthDays         // Prints: has 28 days
+13B MonthDays        // Prints: is an invalid month
+----
+--
+
+=== Iterators and Range
+Collections in Kingfisher provide an iterator interface that enables sequential access to their elements. this interface consists of three core methods that support iteration control and data access during loops. The iteration interface is supported by Strings, Arrays, StringArrays and Ranges. Its purpose is to control Loops.
+
+==== Range Interface
+A `Range` is a form of collection that supports the iteration interface only. A Range is created using the syntax; `start-count (inclusive) end-count (exclusive) step-size Range name`, where step-size is a signed value. When step-size is negative start-count must be greater than end-count
+
+.Collection Iteration Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : Num ) First
+|Restarts the Iteration and returns the first value
+
+|( : Flag ) IsLast
+|Checks if the last iteration was the final one
+
+|( : Num ) Next
+|Gets the next value from the collection
+|===
+
+[NOTE]
+If Next tries to iterate past the end of the collection, an error is raised. The `OnError` construct can be used to handle these errors and terminate loops
+
+[%unbreakable]
+--
+.Range Iteration Examples
+[source]
+----
+0 10 1 Range decade     // A range of 10 values 0 through 9
+2 21 2 Range evenRange  // A range of 10 values 2 to 20
+9 -1 -1 Range countDown // A range of 10 values from 9 through 0
+----
+--
+
+[%unbreakable]
+--
+.Collection Iteration Examples
+[source]
+----
+// Create an array of 5 numbers
+Array[ array 1 2 3 4 5 ]
+
+array.First     // return 1
+array.Next      // return 2
+array.Next      // return 3
+array.Next      // return 4
+array.IsLast    // return false
+array.Next      // return 5
+array.IsLast    // return true
+array.Next      // Error: "End of Iteration"
+
+// Create a range of 5 numbers
+1 6 1 Range range
+
+range.First     // return 1
+range.Next      // return 2
+range.Next      // return 3
+range.Next      // return 4
+range.IsLast    // return false
+range.Next      // return 5
+range.IsLast    // return true
+range.Next      // Error: "End of Iteration"
+----
+--
+
+==== While Loop
+The `While` loop is a conditional loop with a condition at the start, in Kingfisher the loop consutruct is as follows: `Do` condition `While` actions `End`. End always returns to Do and the loop will exit at while if the condition is false. An infinite loop is therefore `Do true While actions End`.
+
+.While Loop Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : ) Do
+|Marks the beginning of a `Do` loop and the target for the closing `End`
+
+|( Flag : ) While
+|When the condition is file `While` will branch to the first instruction after end
+
+|( : ) End
+|`End` marks the end of the `While` loop, and always branches back to `Do`
+
+|===
+
+[%unbreakable]
+--
+.While Loop Example 1
+[source]
+----
+// Count to 10 example
+( : ) Def CountToTen
+    Var count
+
+    100 count.Set
+    Do
+        count.Get 0 =       // Check if end of count
+    While
+        1 count.Sub         // Print current count
+        count.Get Print
+    End
+
+End
+----
+--
+[%unbreakable]
+.While Loop Example 2
+--
+[source]
+----
+ Array[ primes 2 3 5 7 11 13 ]
+// Sum numbers example
+( : ) Def SumToFive
+    Var index
+
+    Do
+        // Check if at and of list
+        index.Get primes.Length =  
+    While
+        // Print the value
+        index.Get Print               
+        
+        // Increment the index
+        1 index.Add
+    End
+    CR Print
+End
+----
+--
+
+==== For Loop
+The `For` loop in Kingfisher is implemented as a `foreach` loop. A foreach loop iterates through a sequence of values using an iterator interface rather than using a bounded index. This approach (adopted from Python), reduces the risk of referencing values that are out of range. This construct is possible because of the iterator interface discussed previously in <<Iterators and Range>>. A traditional For loop can be constructed using `Range` which exposes an iteration interface and is compatible with For.
+
+.For Loop Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : Scalar ) For name
+|Marks the beginning of the For loop, the branch target and also fetches the next iterator. When `For` has processed the last iterator it branches to the instruction following `End` 
+
+|( : ) End
+|`End` marks the end of the `For` loop, and always branches back to `For`
+
+|( : ) Leave
+|Leave the `For` loop cleanly and exit after `End` 
+
+|===
+
+
+[%unbreakable]
+--
+.For Array Example
+[source]
+----
+
+ Array[ primes 2 3 5 7 11 13 ]
+// Print 1 to 5 example
+( : ) Def PrintOneToFive
+    For primes      // iterate through the primes array  
+        Print       // Print the first six primes
+    End
+    CR Print
+End
+----
+--
+
+[%unbreakable]
+--
+.For Range Examples
+[source]
+----
+// Print 1 to 5 example
+( : ) Def PrintOneToFive
+    1 7 1 Range r
+
+    For r           // iterate through the r range
+        Dup *  
+        Print       // Print the first six squares
+    End
+    CR Print
+End
+----
+--

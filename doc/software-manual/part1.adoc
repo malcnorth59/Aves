@@ -1,0 +1,1158 @@
+= Getting Started
+Kingfisher requires minimal configuration and setup to begin operations. The system is available as a ((.D64)) file for use with the ((VICE Emulator)) offering rapid deployment, as a ((ROM Cartridge)), or as a download from the git repository.
+
+This part of the manual presents the fundamentals of the Kingfisher programming language. The content covers system acquisition and loading procedures, operation of the interactive REPL (Read-Evaluate-Print Loop) environment, and the basic concepts that distinguish Kingfisher. The REPL environment facilitates immediate, interactive experimentation with language features, code testing, and practical understanding of the system's operation. The material is structured to provide essential foundations for both newcomers to programming and experienced developers, establishing the necessary groundwork for effective Kingfisher program development.
+
+== The Kingfisher Language
+Kingfisher is a stack-based programming language designed to bring contemporary programming concepts to classic computing platforms. While maintaining compatibility with Commodore systems through its .D64 disk image format, Kingfisher extends beyond traditional BASIC capabilities to offer a robust and flexible programming environment.
+
+=== Design Philosophy
+The language emphasises simplicity and power through its stack-based architecture, providing direct memory access while maintaining strong type safety. Built on fundamental computer science principles, Kingfisher combines the immediacy of interactive programming with the structure and capabilities expected in modern development environments.
+
+=== System Architecture
+The Kingfisher system architecture integrates a compact yet powerful kernel for managing system resources alongside an interactive development environment based on the REPL (Read-Evaluate-Print Loop). These core components work in conjunction with standard modules that provide essential programming tools and utilities for development. 
+
+During system initialisation, the kernel establishes the programming environment, presenting the user with an interactive prompt, as shown below.
+
+[%unbreakable]
+--
+----
+>>> Kingfisher Programming Language V0.1
+31744 Bytes Free
+ok
+----
+--
+
+The system adapts to available hardware resources, with memory allocation adjusted according to the installed capacity. A typical configuration with 32KB of RAM reserves 1024 bytes for system operations, leaving the remainder available for program storage and execution.
+
+== Conventions and Standards
+The Kingfisher programming environment employs consistent conventions for naming, documentation, and code formatting. These standards ensure code readability and maintainability while providing clear guidance for development practices.
+
+=== Naming Standards
+Kingfisher enforces strict naming conventions across different language elements to enhance code clarity and maintain consistency throughout programs. Each language element follows a specific case convention that clearly identifies its purpose and scope within the system.
+
+.Naming Standards
+[%header, cols="2,2,3"]
+|===
+|Element|Convention|Example
+
+|Type
+|PascalCase
+|`Integer`, `StringBuffer`, `CustomType`
+
+|Method
+|PascalCase
+|`ReadLine`, `WriteBytes`, `ConvertToString`
+
+|Definition
+|PascalCase
+|`ProcessData`, `HandleInput`, `ValidateUser`
+
+|Variable
+|camelCase
+|`counter`, `firstName`, `bufferSize`
+
+|Constant
+|kebab-case
+|`max-buffer-size`, `default-timeout`, `screen-width`
+
+|Module
+|kebab-case
+|`max-buffer-size`, `default-timeout`, `screen-width`
+
+|===
+
+=== Documentation Standards
+Documentation in Kingfisher follows specific formatting conventions to ensure clarity and consistency across all reference materials. Code examples throughout the documentation demonstrate practical implementation of concepts and can be executed directly in the REPL environment.
+
+==== Stack Position References
+When working with stack operations, it's essential to have a clear way to reference different positions in the stack. Kingfisher uses a consistent labeling system throughout its documentation, particularly in operation descriptions and stack effect annotations. The following table defines these standard position references.
+
+.Stack Position References
+[%header, cols="^1,2,3"]
+|===
+|Label|Position|Description
+|T|First|Top of stack
+|N|Second|Next on stack
+|B|Third|Bottom of stack
+|===
+
+==== Code Examples
+All code examples appear in dedicated code blocks, clearly separated from the surrounding text. Examples include contextual comments that provide additional information without affecting code execution.
+
+[%unbreakable]
+--
+.Code Block Example
+[source]
+----
+
+// This is a comment in a code block
+
+----
+--
+
+==== Technical References
+The documentation uses several standardised reference formats. Stack Signatures provide clear display of parameter requirements and expected results. Constructor and Method tables present formal definitions of components. Type annotations within examples indicate specific data types. Cross-references throughout the documentation connect related concepts and provide detailed explanations where needed.
+
+== The Interactive Development Environment
+The Kingfisher REPL provides an interactive programming environment through its command-line interface. The system accepts input one line at a time, with immediate feedback after each command execution. This interactive environment facilitates rapid development, testing, and learning through direct experimentation with language features. The environment combines efficient command entry with comprehensive debugging capabilities, making it suitable for both development and educational purposes.
+
+== Using the REPL
+(((REPL, using the repl)))
+Once the `ok` prompt is displayed the REPL is ready to accept commands. After entering values and pressing ENTER a status message of `ok` or `ERROR` followed by a debug message is displayed. If the operation results in an error a message, is printed on the following line. Error messages can be found in this sectionc <<Compilation and Runtime Errors>>. The Debug message consists of the top three stack values with a <<Type Suffix>> and the current position of the stack pointer. A more detailed analysis of the stack can be found with `StackInfo` (see <<Debugging in the REPL>>). 
+
+[%unbreakable]
+--
+.Example REPL Session
+[source]
+----
+1B 2 3S ok - 1B 2V 3S, SP=3
+1 2 3B 4S ok - 2V 3B 4S, SP=4
+7 6 * ok - 42V, SP=1 
+6 7 swap / Error - 6V 7V, SP=2
+'swap' Not Found
+
++ Error, SP=0
+Stack Underflow 
+
+7 6 * Error - 0B 7W 6W, SP=192
+Stack Overflow
+
+10 0 / Error - 10W 0W, SP=2
+Divide by Zero 
+----
+--
+[NOTE]
+Exact error messages may vary from these examples, consult <<Error Message Reference>> in part VI for further details.
+
+=== The Command Line Interface (CLI)
+(((REPL, CLI)))
+The REPL is accessed via a CLI where commands are entered one line at a time, each line can be a maximum of 80 characters. The CLI maintains a 256 byte history buffer, which provides up and down arrows for scrolling through the buffer. For more details see the <<Perch CLI Reference>> in Part VI.
+
+=== Comments in Kingfisher
+Comments in Kingfisher are a ((word)) called `//` which must be space delimited like any other ((word)). `//` can be used in the compiler and interpreter environments and ignores all content after the trailing space up to the end of the current line.
+
+== Stack-Based Programming Fundamentals
+Before diving into Kingfisher programming, it's essential to understand how the language handles calculations and data manipulation through its stack-based architecture. This section introduces the fundamental concepts of postfix notation and stack operations that form the foundation of Kingfisher's programming model.
+
+=== Understanding Postfix Notation
+Before we begin its important to note that Kingfisher uses ((Postfix)) (also known as ((reverse Polish notation)) ) rather than the usual ((Infix)) notation. With postfix notation the operator follows both operands rather than in between them.
+
+For example the infix calculation `3 * 3 - 3 / 3 + 3` evaluates to `5` if the calculation is performed by evaluating from left to right, and `11` if operator precedence rules are applied.
+
+To standardise things a rule defining the precedence of operators was created by mathematicians in the 1600s. Since then it has been adopted for use in programming languages and is now the accepted norm. The rule is expressed as Brackets/Parenthesis, Order/Indices/Exponent, Divide, Multiply, Add, Subtract, which is shortened to ((BODMAS)) or ((BIDMAS)) in the UK, and ((PEMDAS)) in the US and Australia. (*Note:* the reversal of Multiply and Divide, this is not significant because they have equal weight.)
+
+There is no such ambiguity with postfix notation however. If the calculation is written `3 3 / 3 3 * 3 + Swap -`, then the result can only be `11`.
+
+The results from intermediate calculations need to be stored temporarily, which is achieved using a LIFO `Stack`. The Swap operator before the `-` swaps the top two values on the stack so that the subtract operation is performed correctly (Order is significant for both the Divide and Subtract operations).
+
+Postfix can feel a bit counter intuitive to begin with but allows for complex operations without having to use lots of brackets, and helps present an extremely clean and simple syntax. A commented example with a stack debug output showing the top 3 values of the stack is shown below.
+
+[%unbreakable]
+--
+.Infix Notation, Left to Right
+[source]
+----
+3 * 3 - 3 / 3 + 3
+
+3 * 3 = 9
+9 - 3 = 6
+6 / 3 = 2
+2 + 3 = 5
+----
+--
+
+[%unbreakable]
+--
+.Infix Notation BODMAS
+[source]
+----
+3 * 3 - 3 / 3 + 3
+
+3 / 3 = 1
+3 * 3 = 9
+9 + 3 = 12
+12 - 1 = 11 
+----
+--
+
+[%unbreakable]
+--
+.Postfix Notation
+[source]
+----
+3 3 *   // 3 * 3 = 9
+3 3 /   // 3 / 3 = 1
+3 +     // 9 + 3 = 12
+-       // 12 - 1 = 11
+----
+--
+
+== Number System
+Numbers in Kingfisher can be represented in three formats. Decimal numbers (base 10) are written directly without a prefix and can be positive or negative using the '-' prefix. Hexadecimal numbers (base 16) use the '0x' prefix and can contain digits 0-9 and A-F (case insensitive). Binary numbers (base 2) use the '0b' prefix and contain only 0 and 1 digits. Both hexadecimal and binary formats use two's complement for negative values.
+
+Kingfisher is strongly typed, requiring type information for the compiler to check compatibility. When entering literals, a type suffix must be provided. Decimal numbers default to V type if no suffix is specified, while hexadecimal and binary numbers default to B type. For hexadecimal values, a separator is required before the type suffix to prevent ambiguity. Any operation that would result in a value exceeding the capacity of its declared type will raise an error. Variables must be constructed as a specific type before use and cannot change type once created. For a complete reference of supported data types and their ranges, see <<Data Types and CPU Support>> in Part VI.
+
+.Number Suffixes
+[%header, cols="1,1,3"]
+|===
+|Suffix|Type|Description
+
+|V
+|Var
+|Value with same size as address bus 
+
+|B
+|Byte
+|8 bit unsigned value 
+
+|W
+|Word
+|16 bit signed value 
+
+|S
+|Sword
+|24 bit signed value
+
+|L
+|Long
+|32 bit signed value
+
+|F
+|Flag
+|8 bit, 0=false, 1=true
+
+|===
+
+[%unbreakable]
+--
+.Type Suffix Examples
+[source]
+----
+1W 2W +         // Stack: 3W    (Word + Word -> Word)
+1B 2B +         // Stack: 3B    (Byte + Byte -> Byte)
+1W Dup          // Stack: 1W 1W (Scalar duplication)
+3B 4B Compare   // Stack: 1F    (Scalar comparison)
+----
+--
+
+== Error Management
+Kingfisher implements a modern exception-based error handling system. When an error occurs, an exception is raised rather than returning error flags or codes. This approach ensures that errors cannot be accidentally ignored and maintains a clean separation between normal program flow and error handling.
+
+=== Error Types and Handling
+Errors in Kingfisher fall into two categories. The first category consists of catchable exceptions that can be handled by user code. These exceptions allow for graceful recovery and cleanup when errors occur during normal program operation. The second category comprises fatal errors that terminate program execution. These fatal errors typically indicate serious system-level problems and cannot be caught - they will always return control to the operating system.
+
+For a complete reference of all error conditions and their handling, see <<Error Message Reference>> in Part 6.
+
+== Stack Signatures
+Kingfisher has taken Forth's stack notation and extended it to act as a type signature. This section describes the signature system and its components.
+
+=== Type Categories
+Stack signatures use several categories to indicate type requirements. These categories are for documentation purposes only and cannot be used to define a type, they are a used to represent words that have definitions with multiple signatures.
+
+[cols="2,3"]
+|===
+|Category |Description
+
+|Pointer
+|Represents any pointer types such as Strings, Arrays, Slices etc.
+
+|Base
+|Base types are include all scalar types and String (Var, Byte, Word, Sword, Long, Flag, String)
+
+|g1, g2, etc.
+|Represent generic values that can be any type but provide positional information, useful when describing stack operations
+
+|Numeric
+|Represents any numeric type (Var, Byte, Word, Sword, Long)
+
+|Scalar
+|Represents any value of the built in scalar types (Var, Byte, Word, Sword, Long, Flag)
+
+|===
+
+== The Parameter Stack
+The parameter stack serves as the foundation for all computations in Kingfisher. It's important to note that Kingfisher uses a single 'Parameter Stack' for all operations. Kingfisher does employ separate stacks for subroutine calls and type checking, but these are not user-addressable and do not have operators.
+
+=== Stack Signatures 
+Values passed on the stack are managed using stack signatures, which are used to identify parameter types, providing a consistent notation that clearly shows both inputs and outputs of an operation. 
+
+The signature is divided by a colon (:), where values before the colon represent inputs, and values after the colon represent outputs. The order of values in the signature corresponds directly to their position on the stack, with the rightmost value being the topmost stack item.
+
+For example, in the signature ( g1 g2 : g2 g1 ), g1 and g2 are inputs where g2 is on top of the stack, and after the operation, their positions are swapped with g1 now on top.
+
+[%unbreakable]
+--
+.Example Stack Signatures
+[source]
+----
+// Exchanges top two stack items
+( g1 g2 : g2 g1 ) Swap
+
+// Duplicates any scalar value
+( g1 : g1 g1 ) Dup
+
+// Removes any scalar value
+( g1 : ) Drop
+
+// Copies second item to top
+( g1 g2 : g1 ) Over
+----
+--
+
+[%unbreakable]
+--
+.Type Specific Signatures
+[source]
+----
+// Calculate the bitwise And of two bytes 
+( Byte Byte : Byte ) And
+
+// 
+( Var Var : Var ) Add
+----
+--
+
+=== Stack Operators
+Stack operators are used to reorder, duplicate, and remove values on the stack. All operations are fully polymorphic, and allow any mix of types.
+
+.Stack Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+|( g1 : ) Drop|Removes the top stack value
+|( g1 : g1 g2 ) Dup|Creates a duplicate of the top stack value
+|( g1 g2 : g2 g1 ) Swap|Exchanges the top two stack values
+|( g1 g2 : g1 g2 g1 ) Over|Copies the second stack value to the top
+|( g1 g2 g3 : g3 g1 g2 ) ror|Rotates the top three stack values to the right
+|( g1 g2 g3 : g2 g3 g1 ) rol|Rotates the top three stack values to the left
+|===
+
+[%unbreakable]
+--
+.Stack Manipulation Examples
+[source]
+----
+1 Dup ok 1 1 SP=2           // Duplicate top value
+Drop ok 1 SP=1              // Drop the top value
+1 2 Swap ok 2 1 SP=2        // Swap the top two values
+1 2 Over ok 1 2 1 SP=3      // Move N to the top of the stack
+
+// Rotate the top three values 1 position to the right
+1 2 3 ror ok 3 1 2 SP=3
+
+// Rotate the top three values 1 position to the left
+1 2 3 ror ok 2 3 1 SP=3
+----
+--
+
+== Arithmetic Operators
+Arithmetic operators perform mathematical calculations on numeric values. These operations follow standard mathematical rules while enforcing type safety. All arithmetic operations require numeric types and will raise appropriate exceptions for type mismatches or mathematical errors such as division by zero. Results maintain the type of their operands, with overflow checking performed automatically.
+
+.Arithmetic Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+|( Number Number : Number ) *
+|Multiply N by T and leave result on the stack
+
+|( Number Number : Number ) /
+|Divide N by T and leave the quotient on the stack
+
+|( Number Number : Number ) %
+|Divide N by T and leave the remainder on the stack
+
+|( Number Number : Number Number ) /%
+|Divide N by T and leave the quotient and remainder on the stack
+
+|( Number Number : Number ) {plus}
+|Add N to T and leave the sum on the stack
+
+|( Number Number : Number ) -
+|Subtract T from N and leave the difference on the stack
+|===
+
+[%unbreakable]
+--
+.Stack Manipulation Examples
+[source]
+----
+2 3 * ok 6 SP=1     // Multiply 3 by 2
+6 2 / ok 3 SP=1     // Divide 6 by 2
+3 7 + ok 10 SP=1    // Add 3 to 7
+10 8 - ok 2 SP=1    // Subtract 8 from 10  
+
+10 9 % - ok 1 SP=1  // Remainder (modulus) of 10 / 9
+
+// Divide 10 by 9 return quotient and remainder 
+10 9 /% - ok 1 1 SP=2
+----
+--
+=== Bitwise Operators
+Bitwise operators provide low-level manipulation of individual bits within values. These operations are essential for systems programming, and hardware interfacing. All bitwise operations work on Byte values (0-255) and manipulate their binary representation directly. For shift operations, bits moved beyond the byte boundary (8 bits) are discarded, maintaining the byte-sized result.
+
+.Bitwise Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Byte Byte : Byte ) And
+|Bitwise And of N with T
+
+|( Byte Byte : Byte ) Or
+|Bitwise Or of N with T
+
+|( Byte Byte : Byte ) Xor
+|Bitwise Xor of N with T
+
+|( Byte Byte : Byte ) <<
+|Shift N left by T bits
+
+|( Byte Byte : Byte ) >>
+|Shift N right by T bits
+
+|( Byte : Byte ) Not
+|Bitwise Not. Invert all bits
+
+|===
+[%unbreakable]
+--
+.Stack Manipulation Examples
+[source]
+----
+// And 170 with 240 
+0b10101010 0b11110000 And ok 160 SP=1     
+
+// Or 170 with 240 
+0b10101010 0b11110000 Or ok 160 SP=1
+
+// Xor 170 with 240 
+0b10101010 0b11110000 Xor ok 80 SP=1
+
+// Invert 170 
+0b10101010 Not ok 85 SP=1
+
+// Shift left
+0b10101010 << ok 84 SP=1
+
+// Shift right
+0b10101010 << ok 85 SP=1
+----
+--
+=== General Operators
+General operators provide essential functionality that complements the other operator categories. These operations include type conversion, absolute value calculation, and character handling. They maintain type safety while offering flexibility for common programming tasks. String conversion operators ensure safe transformation between string representations and numeric types, with appropriate error handling for invalid conversions.
+
+.General Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Number : Number ) Abs
+|Converts T to a positive number
+
+|( Number Number : Number ) Min
+|Returns the smaller of two numbers
+
+|( Number Number : Number ) Max
+|Returns the larger of two numbers
+
+|( String : Number ) ToNumber
+|Converts the string to a Number type
+
+|( Number : String ) ToString
+|Converts the number to a String type
+
+|( Scalar : Byte ) SizeOf
+|Returns type size in bytes
+
+|===
+
+[%unbreakable]
+--
+.Stack Manipulation Examples
+[source]
+----
+"Hello" Print     // Prints "Hello"
+-1 Abs ok 1 SP=1    // return the unsigned value T
+1 2 Min ok 1 SP=1   // return the lowest value
+3 4 Max ok 4 SP=1   // return the highest value
+
+// Convert value in string to number
+"12" ToNumber ok 12 SP=1
+"123B" ToNumber ok 123B SP=1
+
+// convert number to string
+123 ToString ok <String> SP=1
+123W SizeOf ok 2 SP=1
+----
+--
+
+== Built-in Types
+Kingfisher has Scalar, String and Array types built in, which enables the construction of variables. Data held within a typed variable can only be accessed using the ((linked methods)). These linked methods are customised to operate on the variable contents only, which ensures type compatibility
+
+=== Scalar Types
+The supported Scalar types are listed below in the <<Supported Scalar Types>>. A new variable is constructed using the type name followed by a unique name, as described in the Scalar variables examples. 
+
+.Scalar Constructors
+[%header, cols="2,3"]
+|===
+|Constructor|Description
+
+|Var
+|A value that is the same size as the address bus. See <<Supported Architectures>>. It can be Word, Sword, 
+or Long. 
+
+Used for index operations for arrays and buffers. Size matches CPU architecture
+
+
+|Byte
+|An 8 bit unsigned number, with a range of: +
+0-255.
+
+Used for character data, strings, text manipulation, IO operations
+
+|Word
+|A 16 bit signed number, with a range of: +
+-32768 - 32767
+
+Default choice for integer maths and real-time applications
+
+|Sword
+|A 24 bit signed number, with a range of: +
+-8388608 - 8388607
+
+Used for 20-24 bit addressing, efficient integer maths with better resolution
+
+|Long
+|A 32 bit signed number, with a range of: +
+-2,147,483,648 - 2,147,483,647
+
+Used for 32-bit addressing, high-resolution integer and fixed-point maths
+
+|Flag
+|An 8 bit wide type containing values of 0=False, and  1=True
+
+Used in all boolean and operations
+
+|===
+
+== Constants
+Constants provide a way to associate meaningful labels with values, replacing literal values in code. Constants are immutable once defined and can be used with any supported data type. The compiler optimises constant usage, resulting in smaller code footprint and improved performance.
+
+=== Declaring Constants
+Constants are declared using the 'Constant' keyword following the value and type (if specified). By convention, constant names use uppercase letters or kebab-case.
+
+Constants are commonly used for character codes and control characters, status flags and boolean values, mathematical constants, configuration values, and state definitions. Using constants instead of literal values improves code readability by providing meaningful names and ensures a single point of maintenance for frequently used values. This approach reduces typing errors, enables better code navigation and refactoring support, and allows the compiler to perform type checking at compile time while optimising for a smaller code footprint.
+
+[%unbreakable]
+--
+.Examples
+[source]
+----
+32B Constant spc
+8B  Constant tab
+10B Constant nl
+13B Constant cr
+
+0  Constant zero
+1  Constant one
+-1 Constant neg-one
+
+0F Constant true
+1F Constant false
+
+true Print      // Prints 1
+zero Print      // Prints 0
+----
+--
+
+== Variables
+At the heart of Kingfisher's type system lies its approach to variable management. While the stack provides temporary storage for passing values between functions, variables offer persistent state storage that can be accessed at any time within their active scope. Unlike many traditional programming languages that permit dynamic typing, Kingfisher implements a rigorous type-safe environment where variables must be explicitly declared with their intended type before use.
+
+=== Variable Construction
+Variables are constructed and instantiated using specific type constructors. Each variable is initialised to 0 by default, ensuring a known starting state. This type-safe approach ensures that variables maintain their designated type throughout their lifetime, preventing type-related errors during program execution.
+
+In addition to the standard constructor there is a literal constructor which is used to set the initial value of the variable.
+
+.Variable Constructors
+[%header, cols="2,3"]
+|===
+|Constructor|Description
+
+|( : ) Var name
+|Constructs a variable called name, sized to match the architecture's address bus width
+
+|( : ) Var( name number )
+|Constructs a variable called name sized to match the architecture's address bus width, and initialises it with number
+
+|( : ) Byte name
+|Constructs an 8-bit unsigned variable called name
+
+|( : ) Byte( name number )
+|Constructs an 8-bit unsigned variable called name, and initialises it 
+
+|( : ) Word name
+|Constructs a 16-bit signed variable
+
+|( : ) Word( name number )
+|Constructs a 16-bit signed variable called name, and initialises it with number
+
+|( : ) Sword name
+|Constructs a 24-bit signed variable
+
+|( : ) Sword( name number )
+|Constructs a 24-bit signed variable called name, and initialises it with number
+
+|( : ) Long name
+|Constructs a 32-bit signed variable
+
+|( : ) Long name( name number )
+|Constructs a 32-bit signed variable called name, and initialises it with number
+
+|( : ) Flag name
+|constructs an 8 bit unsigned boolean variable called name. flag can only contain 0-false, 1-true
+
+|( : ) Flag( name 0|1 )
+|Constructs a 8-bit unsigned variable called name, and initialises it to 0 or 1.
+
+|===
+
+[%unbreakable]
+--
+.Variable Constructor Example
+[source]
+----
+Byte shortCard      // Create a byte value set to 0 
+Byte( test 100 )    // Create a byte value set to 100
+----
+--
+
+=== Variable Operations
+Once constructed, variables support a consistent set of operations through method calls. These operations provide a clean interface for reading, modifying, and managing variable state. All operations maintain type safety and perform bounds checking to prevent invalid states.
+
+.Variable Methods
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Scalar : ) Add
+|Performs bounds-checked addition of the given value to the variable's content. Not available with the Flag type
+
+|( : Scalar ) Get
+|Retrieves the current value while maintaining type safety
+
+|( : ) Reset
+|Reinitialises the variable to its default state of 0
+
+|( Scalar : ) Set
+|Assigns a new value after performing type compatibility verification
+
+|( Scalar : ) Sub
+|Executes bounds-checked subtraction from the variable's current value. Not available With the Flag type
+
+|( : ) Toggle
+|Toggle the value of the flag. Flag type only
+
+|===
+
+[%unbreakable]
+--
+.Scalar Variable Operations
+[source]
+----
+// Variable construction and initialisation
+// Creates a 16-bit signed counter
+Word Variable counter   
+
+// Creates an 8-bit unsigned status indicator
+Byte Variable status
+
+// Creates a boolean state flag
+Flag Variable ready
+
+// Value manipulation
+// Assigns 42 to counter
+42 counter.Set
+
+// Displays current counter value
+counter.Get Print       
+
+// Increases counter by 5
+5 counter.Add
+
+// Returns counter to 0
+counter.Reset
+----
+--
+
+[%unbreakable]
+--
+.Variable Interactions
+[source]
+----
+// Demonstrating type safety and bounds checking
+0xFF00 Constant MAX-VALUE
+297S Constant OFFSET
+0xAAB Constant MASK
+
+Var total
+Byte value
+
+// Sets total to maximum value
+MAX-VALUE total.Set
+
+// Reduces total by offset value
+OFFSET total.Sub
+
+// Assigns mask to value
+MASK value.Set
+
+// ERROR: Type mismatch
+value.Get total.Add
+
+// Adds value to total with bounds checking
+value.Get toVar total.Add
+----
+--
+
+== Collections
+In Kingfisher's memory model, collections provide structured storage for multiple values, extending beyond the single-value limitations of variables. The language implements collection types to address different data storage needs: Arrays for sequential numeric values and Strings for text manipulation. Arrays are available for each <<Scalar Types, Scalar Type>>, providing type-safe storage and operations.
+
+== Arrays
+Arrays provide fixed-size sequential storage for values of uniform type. Unlike variables which hold single values, arrays en
+able developers to manage related data as a cohesive unit, supporting both direct element access and slice operations for working with subsequences. Arrays are available for each <<Scalar Types, Scalar Type>>, ensuring type safety across all operations.
+
+.Array Constructors
+[%header, cols="2,3"]
+|===
+|Constructor|Description
+
+|( Var : ) Array name
+|Creates a fixed-size array called name of type Var with specified length
+
+|( : ) Array[ name number1 number2 ... numberN ] 
+|Creates a generic array called name from the succeeding literals
+
+|( Var : ) <T>Array name
+|Creates a fixed-size typed array called name with specified length
+
+|( : ) <T>Array[ name number1 number2 ... numberN ]
+|Creates a typed array from a literal sequence of the same type
+|===
+
+[NOTE]
+<T> is one of Var, Byte, Word, Sword, Long and Flag
+
+=== Array Slices
+Array slices provide a lightweight mechanism for working with subsequences of arrays without copying data. They maintain a reference to the underlying array along with bounds information, enabling efficient operations on partial sequences. Like their parent arrays, slices are available for both generic and typed arrays.
+
+.Array Methods
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Var Var : ) Add
+|Add value of N to value element T.
+
+|( ArraySlice Var : ) Copy
+|Copies an Slice from pointer in N, size T into this array at position 0
+
+|( ArraySlice Var Var : ) Copy
+|Copies an Slice from pointer in B, size N into this array at position T
+
+|( ArraySlice Var Var : ) Fill
+|Copies Slice from base pointer B, length N elements, with value T
+
+|( : Var ) Length
+|Get Length of Array in T
+
+|( Var : ) Get
+|Get value of element T
+
+|( Var : ) Reset
+|Reset element N to zero
+
+|( Var Var : ArraySlice Var ) Slice
+|Creates a slice view of array elements between start N, and end T indices. Returns pointer to slice N and length T
+
+|( Var Var : ) Set
+|Set the value in element T to the value in N
+
+|( Var Var : ) Sub
+|Subtract N from the value in element T
+
+|===
+
+.Typed Array Methods
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( <T>Slice Var : ) Copy
+|Copies a Slice from pointer in N, size T into this array at position 0
+
+|( <T>Slice Var Var : ) Copy
+|Copies a Slice from pointer in B, size N into this array at position T
+
+|( <T>Slice Var Var : ) Fill
+|Copies Slice from base pointer B, length N elements, with value T
+
+|( Var : ) Get
+|Get value of element T
+
+|( Var : ) Reset
+|Reset element T to zero
+
+|( Var Var : <T>Slice Var ) Slice
+|Creates a slice view of array elements between start N (inclusive), and end T (exclusive) indices. Returns pointer to slice N and length T
+
+|( Scalar Var : ) Set
+|Set the value of element T to the value in N
+
+|( Scalar Var : ) Sub
+|Subtract the value of element N to the value in N. Not FlagArray
+
+|( Var : ) Toggle
+|Toggle the value of element T. FlagArray only
+
+|===
+
+[%unbreakable]
+--
+.Array Examples
+[source]
+----
+100 Array test
+20 FlagArray flags
+
+Array[ primes 2 3 5 7 11 13 17 19 ]
+
+// Sets the value of element 50 to 1
+1 50 test.Set
+
+// Gets the value from element 50 (=1)
+50 test.Get
+
+// Adds 1 to the value in element 50 (=2)
+1 50 test.Add
+
+// reset element 50 to zero
+50 test.Reset
+
+// Fill array from element 10 with 10 copies of 5555 hex 
+10 10 test.Slice 0x5555/V test.Fill 
+
+// Copy primes to beginning of array
+0 8 primes.Slice test.Copy
+
+// Copy primes to element 10 of array
+0 8 primes.Slice 10 test.Copy
+----
+--
+
+== Strings
+Strings serve as fixed-length buffers optimised for text storage and manipulation. A single byte length is used to constrain the length of the string to between 0 and 255. The implementation ensures bounds checking on all string operations.
+
+.String Constructors
+[%header, cols="2,3"]
+|===
+|Constructor|Description
+
+|( Byte : ) String name
+|Constructs a fixed-length string buffer called name with specified length in T
+
+|( : ) String( name "string" )
+|Constructs an immutable string called name containing the literal string
+
+|===
+
+[%unbreakable]
+--
+.String Constructor Example
+[source]
+----
+// Create an immutable string
+String( hello "Hello, World" )  
+
+25 String name      // Create a string buffer to hold a name
+----
+--
+
+=== String Slices
+String slices provide a lightweight mechanism for working with subsequences of strings without copying data. They maintain a reference to the underlying string buffer along with bounds information, enabling efficient text operations on partial sequences.
+
+.String Methods
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( String : ) Append
+|Appends String T to end of current String truncating at length of buffer
+
+|( StrSlice Byte: ) Append
+|Appends StrSlice N, of length T to end of current String truncating at length of buffer
+
+|( StrSlice Byte : ) Copy
+|Copies slice contents to string buffer position 0
+
+|( StrSlice Byte Byte : ) Copy
+|Copies slice contents to string buffer at given position
+
+|( String : StrSlice Byte ) Find
+| Find Substring T in this string and return StrSlice N length T
+
+|( : String ) Get
+|Returns a String reference
+
+|( Byte : Byte ) Get
+|Returns the character at element T
+
+|( : Byte ) Length
+|Returns the length of the string
+
+|( : Byte ) Size
+|Returns the size of the string buffer
+
+|( String : ) Set
+|Sets the string Reference to point to string T
+
+|( Byte Byte : ) Set
+|Sets the the value of element T to character N
+
+|( Byte Byte : StrSlice Byte ) Slice
+|Creates a string slice view between start N (inclusive) end T (exclusive)
+
+|( StrSlice Byte : ) Lower
+|Converts all characters in the slice to lowercase
+
+|( StrSlice Byte : ) Upper
+|Converts all characters in the slice to uppercase
+
+|( StrSlice Byte : ) Title
+|Converts all character  in the slice to title case
+
+|( String : ) Trim
+|Removes leading and trailing whitespace from Trim
+
+|===
+
+[%unbreakable]
+--
+.Collection Operations Example
+[source]
+----
+// Demonstrating collection operations
+20 String message
+
+// Store greeting in string buffer
+String( hello "Hello, World" )
+
+0 hello.Length hello.Slice message.Copy    
+
+// Convert to uppercase
+message.Upper                  
+
+50 Array numbers
+
+// Initialise an array with a sequence
+String[ num 1 2 3 4 5 ] 
+0 Array.Length num.Slice numbers.Copy
+
+// Display subset of array elements
+2 4 numbers.Slice Print
+----
+--
+
+== StrArrays
+StrArrays provide fixed-size sequential storage for multiple strings, enabling efficient management of text collections. Each element in a StrArray can store a string of up to 255 bytes, following the same capacity rules as individual String types (see <<Strings>>). StrArrays support both direct element access and slice operations for working with subsequences.
+
+.StrArray Constructors
+[%header, cols="2,3"]
+|===
+|Constructor|Description
+
+|( Var Var : ) StrArray name
+|Constructs a fixed-size array, size N, of strings with specified length T
+
+|( : ) StrArray[ name "string1" "string2" ... "stringN" ]
+|Constructs an immutable array of strings, from specified list of literal strings
+
+|===
+
+=== StrArrSlices
+StrArrSlices provide a lightweight mechanism for working with subsequences of string arrays without copying data. They maintain a reference to the underlying string array along with bounds information, enabling efficient operations on partial sequences.
+
+When copying between slices and arrays, the `Copy` operation performs a deep copy, meaning it duplicates both the array structure and the contents of each string. This ensures that modifications to strings in the source array won't affect the destination array.
+
+.StrArray Methods
+[%header, cols="2,2"]
+|===
+|Operation|Description
+
+|( StrArrSlice Var : ) Copy
+|Copies T elements from StrArrSlice N to StrArray starting at position 0. Performs deep copy of String contents.
+
+|( StrArrSlice Var Var : ) Copy
+|Copies N elements from StrArrSlice B to element starting at T, bounded by the array length
+
+|( Var : String ) Get
+|Returns a reference to the String at element T
+
+|( String Var : ) Set
+|Sets element at T to the String reference N
+
+|( Var Var : StrArrSlice Var ) Slice
+|Creates a slice view from index N (inclusive) to index T (exclusive). Returns StrArrSlice with base pointer N and length T
+
+|===
+
+[%unbreakable]
+--
+.StrArray Operations Example
+[source]
+----
+// Create array of 5 strings length 15
+15 5 StrArray buffer           
+
+// Create array of strings length 15 from literal StrArray
+StrArray[ names "Alice" "Bob" "Carol" ]
+
+// Slice whole Array and copy to Buffer starting at element 2
+0 3 names.Slice 2 buffer.Copy
+
+// Create another StrArray for John
+StrArray[ john "John" ] 
+
+// Copy to element 0 in buffer 
+0 1 john.Slice buffer.Copy  
+
+// Set position 1 to point to String literals
+"Arnold" 1 buffer.Set
+
+// Get Reference from position 1 and print Arnold 
+1 buffer.Get Print
+----
+--
+
+== Definitions
+Programming languages provide various ways to structure and organise code into reusable units. In traditional languages, these might be functions, procedures, or methods. Kingfisher approaches this through the concept of ((word)) ((definitions)), drawing inspiration from stack-based languages while providing modern programming constructs.
+
+A ((word)) in Kingfisher represents a named sequence of operations that can be executed as a single unit. Each ((word)) encapsulates specific functionality, making programs more modular and easier to understand. When defining a ((word)), developers specify both its interface through a stack signature and its behaviour through a sequence of operations.
+
+The system processes ((word))s in two distinct phases. During the definition phase, it creates a dictionary entry and validates the ((word))'s composition. When the ((word)) is later invoked, the system opens a local scope, executes the compiled operations, and then closes the scope upon completion.
+
+Each definition should maintain a clear purpose and predictable stack behaviour, as can be seen from all of the examples shown below all variables are declared in the global scope. For information about working with local scope, see the <<Scope>> section.
+
+.Definitions
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( Signature : ) Def name 
+|Start of a definition that creates a new ((word)) and opens a new scope. The signature is created and managed by the Signature construct
+
+|End
+|Required keyword that concludes the ((word)) definition
+
+|===
+
+[%unbreakable]
+--
+.Definition Example
+[source]
+----
+( Byte Byte : Byte ) Def Add
+    + Print
+End
+
+5 2 Add      // Displays: 7
+----
+--
+
+[%unbreakable]
+--
+.Variable Management Example
+[source]
+----
+// Create byte variable
+Byte Variable count
+
+( Byte : ) Def Increment
+    count.Get +     // Add input to current value
+    count.Set       // Store result
+End
+
+5 count.Set         // Initialize to 5
+2 Increment         // Add 2 to count
+count.Get Print     // Displays: 7
+----
+--
+
+==== Working with Strings
+String manipulation can be encapsulated within ((word)) definitions. The following example shows how to work with string buffers.
+
+[%unbreakable]
+--
+.String Operation Example
+[source]
+----
+20 String message    // Create string buffer
+
+( : ) Def ShowMessage
+    String( hello "Hello" )
+
+    hello.Get Print         // Print the literal directly
+
+    // Copy "Hello" into buffer
+    0 hello.Length hello.Slice message.Copy
+    
+    message.Get Print       // Display result
+End
+
+ShowMessage                 // Displays: HelloHello
+----
+--
+
+[%unbreakable]
+--
+.Array Operation Example
+[source]
+----
+// Create array of size 5
+5 Array numbers
+
+( Byte : ) Def StoreAndShow
+    // Store value at position 0
+    0 numbers.Set 
+
+    // Display first element
+    0 numbers.Get Print
+End
+
+42 StoreAndShow    // Displays: 42
+----
+--
+
+[%unbreakable]
+--
+.Complex Definition Example
+[source]
+----
+Byte total
+Byte count
+
+( Byte : ) Def AddToTotal
+    total.Add       // Add value to total
+    1 count.Add     // Increment counter
+End
+
+total.Reset         // Clear total
+count.Reset         // Clear counter
+
+5 AddToTotal        // Add first value
+3 AddToTotal        // Add second value
+
+total.Get Print     // Display total: 8
+count.Get Print     // Display count: 2
+----
+--

@@ -1,0 +1,301 @@
+= System Architecture Overview
+
+== Architectural Principles
+Before delving into specific technical details, it's important to understand the fundamental design philosophies and architectural decisions that shape the Aves platform. These principles reflect both practical engineering considerations and broader goals for the system's role in modern retrocomputing.
+
+The architecture of Aves represents a careful balance between preserving the elegant simplicity of classic 8-bit systems and incorporating modern design practices. Rather than simply replicating vintage hardware, each aspect of the system has been thoughtfully evaluated and, where appropriate, enhanced to meet contemporary needs while maintaining the spirit of its inspiration.
+
+At the heart of Aves lies Considered Minimalism, where each component serves multiple purposes through clever design rather than brute-force complexity. This approach yields efficient use of resources while maintaining clarity and serviceability. 
+
+The platform embraces Pragmatic Modernization, incorporating contemporary interfaces and manufacturing techniques in ways that preserve the system's accessibility and educational value. This careful integration of modern elements enhances rather than obscures the fundamental simplicity of the design.
+
+Flexible Evolution stands as another cornerstone of the architecture. The system accommodates various processor and memory configurations while maintaining a consistent programming model, allowing it to grow with user needs without compromising its core principles.
+
+The following sections detail how these principles manifest in specific aspects of the system architecture, from processor selection to memory management and I/O subsystems.
+
+== System Architecture
+The Aves platform's architectural heritage stems from the remarkable family of Commodore 8-bit and 16-bit computers, drawing particular inspiration from the CBM8096, Commodore 64 and Plus/4 machines. Whilst these classic designs laid the groundwork, Aves refines and modernises their most successful elements into a cohesive and elegant architecture.
+
+At the heart of every Aves system lies a philosophy of considered minimalism, where each component serves multiple purposes through clever design rather than brute-force complexity. This approach manifests most notably in the memory management and I/O subsystems, where time-tested concepts from the Commodore machines have been thoughtfully reimagined.
+
+The memory architecture pays homage to the innovative bank-switching schemes of its forebears. Where the CBM8096 introduced upper memory banking, and the Commodore 64 demonstrated the flexibility of ROM overlay techniques, Aves unifies these concepts into a sophisticated yet straightforward memory management system. This arrangement provides remarkable flexibility whilst maintaining compatibility with traditional software design patterns.
+
+Perhaps the most significant departure from tradition lies in the I/O subsystem. Where Commodore machines typically employed multiple interface adapters—CIAs, PIAs, and various custom chips—Aves consolidates these functions into a carefully orchestrated arrangement centred on the W65C22 VIA. This consolidation does not represent a compromise but rather an elegant solution that reduces complexity whilst expanding capabilities.
+
+The VIA implementation demonstrates the platform's pragmatic approach to modernisation. Through thoughtful programming of this versatile chip, Aves achieves compatibility with contemporary interfaces such as I2C and SPI, whilst also supporting a custom high-speed serial protocol, the Aves Serial Bus (ASB). This bus draws inspiration from the efficiency of Commodore's serial bus architecture whilst eliminating its notorious timing dependencies.
+
+Throughout the system, one finds this pattern of respectful modernisation. The hardware banking mechanisms, whilst more sophisticated than their predecessors, maintain familiar programming paradigms. The interrupt handling system, though more capable than the original Commodore implementations, remains straightforward and predictable. Even the most advanced configurations, supporting the 16-bit W65816 processor, retain compatibility with their 8-bit siblings through carefully considered hardware abstractions.
+
+This architectural philosophy extends to the physical design as well. The circuit board layouts, component selection, and signal routing all reflect a balance between simplicity and capability. Modern manufacturing techniques and components are employed where beneficial, yet the system remains accessible to hobbyist construction and modification, maintaining the spirit of its predecessors.
+
+
+
+==== I2C Interface
+The I2C interface is implemented in software using PA0 of the VIA for SCL and PA7 for SDA. This arrangement provides optimal bit manipulation capabilities, as testing bit 7 with the BIT instruction will directly affect the processor's N flag for efficient state testing. Both lines require external 4.7kΩ pull-up resistors to VCC to ensure proper signal levels and to meet I2C bus specifications.
+
+The implementation leverages specific characteristics of the 65C02 instruction set. The lines are manipulated using the data direction register to create a pseudo open-drain configuration - setting a pin as input allows it to float high via the pull-up resistor, while setting it as output drives it low. Start conditions are generated by transitioning SDA from high to low while SCL is high, with stop conditions created by the opposite transition. Clock generation employs increment and decrement instructions for precise timing control, while the BIT instruction enables rapid testing of PA7's state through the N flag.
+
+The interface supports standard mode I2C operation at 100 kHz, with timing managed through software delays calibrated to the system clock frequency. Clock stretching is supported through continuous monitoring of the SCL line state, allowing compatibility with slower I2C peripheral devices. Multi-master mode is not supported.
+
+==== SPI Interface
+The SPI interface is implemented in firmware, as modes 0 and 3 only. As with the I2C interface the clock; SCK is implemented on PB0, PB1-PB3 contains the device number and is decoded with a 74HC138 decoder to provide 7 device selects ss1-ss7.
+
+MOSI uses PB6 and MISO PB7. 
+
+SPI is level converted to 3.3V for compatibility with most SPI memory and IO devices.
+
+==== Aves Serial Bus (ASB)
+The Aves serial bus uses the VIA shift register to implement a half duplex serial protocol, that is substantially faster than Commodore's propitiatory Serial bus (frequently incorrectly referred to as IEC). The VIA's CAn lines are used as handshake lines. PA6 is used to determine if the bus is transmitting or receiving
+
+==== PS/2 Keyboard Interface
+The PS/2 Keyboard interface is based on Ben Eater's PS/2 keyboard interface design, which uses 74HC595 shift registers. Unlike Ben's implementation, data is read directly from the register's parallel output, freeing up 8 additional I/O lines on the VIA. The interrupt logic remains unchanged, using the VIA's CA1 input to detect incoming data.
+
+==== I/O expansion port 
+The I/O expansion port is presented on a 34 pin right angle male header, it comprises the 8 x data lines, 12 x address lines, 4 x select lines, RnW, Phi2, RESETb, IRQb, power and gnd.
+
+.Expansion Port Pinout
+[%header,rows="2,3"]
+|===
+|Pin No|Description
+
+|1,2
+|Ground
+
+|3-10
+|8 bit, Address Bus, A0-A7
+
+|11
+|RnW signal 1=read, 0=write
+
+|12
+|Phi2 clock, represents phase 2 of the system clock, which is used to synchronise all CPU operations
+
+|13-20
+|8 bit Data bus D0-D7
+
+|21-23
+|IOb1-IOb3, active low IO select signals
+
+|24
+|IRQb, Interrupt request, active low
+
+|25
+|RESb, Reset signal, active low
+
+|26
+|RDY, signals that the CPU can continue
+
+|27
+|BE, bus enable signal enables cpu address and data bus tristate buffers
+
+|28, 29
+|Not Used
+
+|31,32
+|+5V Supply
+
+|33,34
+|Ground
+|===
+
+[bibliography]
+== References
+
+* [[[W65c02,1]]] Western Design Center, "W65C02S 8-bit Microprocessor", Publication 651xx-14 Rev. 8.0
+* [[[W65816,2]]] Western Design Center, "W65C816S 16-bit Microprocessor", Publication 655xx-16 Rev. 10.0
+* [[[W65c22,3]]] Western Design Center, "W65C22S Versatile Interface Adapter", Publication 652xx-14 Rev. 4.0
+* [[[necv25,4]]] NEC Electronics, "V25 16-bit Single Chip CMOS Microcomputer", Document ID: S11988EJ3V0UM00
+* [[[as6c1008,5]]] Alliance Memory, "AS6C1008 128K x 8 Low Power CMOS SRAM", Rev. 1.0
+* [[[eater,6]]] Ben Eater, "Building a 6502 computer", https://eater.net/6502
+
+[NOTE]
+--
+Current versions of these datasheets may be obtained from:
+
+* Western Design Center documents: Available from manufacturer website or preserved copies in Aves repository
+* NEC/Renesas documents: Available from Renesas historical documentation archive
+* Memory datasheets: Available from current manufacturers of compatible devices
+
+The specific versions used in developing Aves are preserved in the project repository under `/doc/datasheets/` to ensure reproducible builds and consistent reference.
+--
+
+* [[[mc68hc000,7]]] Motorola, "MC68HC000 HCMOS Microprocessor", ADI1024R1
+* [[[z16c01,8]]] Zilog, "Z16C01/02 CMOS CPU with MMU", DC2144-01
+* [[[v35,9]]] NEC Electronics, "V35 16-bit Single-Chip CMOS Microcomputer User's Manual", Document ID: S11989EJ3V0UM00
+
+[NOTE]
+--
+The CPU timing specifications can be found in:
+* W65C02S/W65C816S - References [1] and [2]
+* V25/V35 - References [4] and [9]
+* MC68HC000 - Reference [7]
+* Z16C01 - Reference [8]
+--
+
+== Aves 8-bit Models
+The Aves 8-bit family consists of five primary models, each designed to serve different use cases while maintaining compatibility and adhering to the platform's core principles.
+
+=== Aves Sparrow
+The Sparrow represents the Commodore PET re-imagined. It's specification has been adapted to integrate with modern computer monitors and keyboards but offers 40 column by 25 row display, via and SVGA port.
+
+.Sparrow Specifications
+* Processor: R65C02 @ 4MHz
+* Memory:
+** 32KB Lower RAM
+** 32KB Upper RAM (Banked)
+** 32KB EPROM (Banked)
+* 6845 CRTC display controller
+* I/O: W65C22 VIA, supporting:
+** I2C, and SPI Interfaces (Software implementation)
+** ASB (Aves Serial Bus, using 65C22 shift register) 
+** 6 x GPIO lines
+* PS/2 Keyboard
+* Expansion: A 34-pin IO expansion port
+
+=== Aves Dunnock
+The Dunnock represents the Commodore 8000 series re-imagined. It's specification has been adapted to integrate with modern computer monitors and keyboards but offers 80 column by 25 row display, via an SVGA port.
+
+.Dunnock Specifications
+* Processor: R65C02 @ 4MHz
+* Memory:
+** 128K RAM:
+*** 32KB Lower RAM
+*** 96KB Upper RAM (Banked)
+** 128KB FLASH (Banked)
+* 6845 CRTC display controller
+* I/O: W65C22 VIA, supporting:
+** I2C, and SPI Interfaces (Software implementation)
+** ASB (Aves Serial Bus, using 65C22 shift register) 
+** 6 x GPIO lines
+* PS/2 Keyboard
+* Expansion: A 34-pin IO expansion port
+
+=== Aves Robin
+The Robin represents the Commodore VIC-20 re-imagined. It's specification includes an original 6561 VIC chip with the Aves standard memory and IO configuration. The display area is increased to 28 columns by 30 rows
+
+.Robin Specifications
+* Processor: W65C02S @ 4.43MHz
+* Memory:
+** 32KB Lower RAM
+** 32KB Upper RAM (Banked)
+** 32KB EPROM (Banked)
+* 6561 VIC display controller
+* I/O: W65C22 VIA, supporting:
+** I2C, and SPI Interfaces (Software implementation)
+** ASB (Aves Serial Bus, using 65C22 shift register) 
+** 6 x GPIO lines
+* PS/2 Keyboard
+* Expansion: A 34-pin IO expansion port
+
+=== Aves Blackbird
+
+.Blackbird Specifications
+* Processor: W65C816S @ 8.86MHz
+* Memory:
+** 128K RAM
+** 128K Flash 
+* 6569 VIC II display controller
+* I/O: W65C22 VIA, supporting:
+** I2C, and SPI Interfaces (Software implementation)
+** ASB (Aves Serial Bus, using 65C22 shift register) 
+** 6 x GPIO lines
+* PS/2 Keyboard
+* Expansion: A 34-pin IO expansion port
+
+=== Aves Starling
+.Starling Specifications
+* Processor: W65C02S @ 8.86MHz
+* Memory:
+** 32K Lower RAM
+** 96K Upper RAM (Banked)
+** 128K Flash (Banked)
+* 8530 TED display controller
+* I/O: W65C22 VIA, supporting:
+** I2C, and SPI Interfaces (Software implementation)
+** ASB (Aves Serial Bus, using 65C22 shift register) 
+** 6 x GPIO lines
+* PS/2 Keyboard
+* Expansion: A 34-pin IO expansion port
+
+=== Aves Fieldfare
+The Fieldfare represents the ultimate expression of the Aves 8-bit family, drawing inspiration from both the Commodore 128 and the unreleased P-500. It features a sophisticated multi-processor architecture with three loosely coupled subsystems.
+
+.Fieldfare Specifications
+* Main Processor: W65C816S @ 10MHz
+** 16-bit processing mode
+** 24-bit address bus
+** Direct memory access - no MMU
+** Primary system control
+** 512KB Main RAM - segmented in 64K blocks
+** 128KB Flash ROM - segmented in 64K blocks
+
+* I/O Subsystem:
+** Processor: R65C02 @ 4MHz
+** 2KB Dual-Port RAM fixed in address space
+** 32KB RAM
+** 8KB EPROM
+** Direct address connection to peripherals
+** Handles all peripheral operations autonomously
+** Real-time I/O processing
+** Manages peripheral timing requirements
+
+* Video Subsystem:
+** Processor: W65C02S @ 8.86MHz
+** 32KB dedicated Video RAM
+** 8KB EPROM
+** 2KB Dual-Port RAM fixed in address space
+** 6569 VIC-II display controller
+** Direct address connection
+** Independent video processing
+** Hardware sprite management
+** Multiple display modes
+
+* Inter-Processor Communication:
+** Main-I/O: 2KB Dual-Port RAM
+** Main-Video: 2KB Dual-Port RAM
+** Hardware address decoding for DP RAM selection
+** Fixed memory mapping for communication areas
+
+* Memory Architecture:
+** Address lines A0-A15 fully decoded
+** A16-A23 partially decoded for segment selection
+** Direct address line connection
+** Upper address lines select 64K segments
+** I/O devices mapped directly to address space
+** Fixed 64K segments defined by hardware
+** No dynamic banking or memory management
+** No MMU - direct memory access throughout
+
+* Display Modes:
+** VIC-II graphics modes
+** 40/80 column modes
+** Programmable character sets
+** Hardware sprite support
+
+* Expansion:
+** Primary 34-pin IO expansion port
+** Secondary high-speed expansion bus
+** Enhanced interrupt handling capabilities
+** Direct memory access port
+
+* Compatibility:
+** Native 16-bit mode
+** 8-bit compatibility mode
+** Support for both 6502 and 65816 code execution
+
+== Aves Peripherals
+
+== Aves 16-bit Models
+
+== Foundational Influences
+Garth Wilson's work has influenced multiple aspects of Aves:
+
+=== Physical Layer Solutions
+* VIA shift register timing fixes
+* I2C implementation principles 
+* SPI interface design patterns
+
+=== Interrupt Handling
+* His high-level Forth interrupt approach influencing Kingfisher
+* Clean separation of hardware and software concerns
+* Efficient interrupt processing

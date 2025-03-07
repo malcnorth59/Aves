@@ -1,0 +1,628 @@
+= Runtime Features
+Runtime features provide the essential services needed by programs during execution, and provide file access, system primitives and memory management services. While many modern systems hide such features behind layers of abstraction, Kingfisher uses a more traditional direct approach that is better suited to vintage hardware. 
+
+The runtime features focus on basic safety and reliability, providing simple type checking and clear error reporting while maintaining direct access to system resources. This helps catch common programming errors at compile-time while still allowing efficient use of the limited resources available on vintage systems.
+
+== Introduction
+The runtime system provides an effective programming environment and execution environment while maintaining efficient operation on vintage hardware. It bridges the gap between high-level programming concepts and the underlying system capabilities through a set of carefully designed abstractions.
+
+The runtime system is built on four core abstractions, which are: a uniform file system interface providing access to various storage devices, an object system supporting static type creation and reference management, a Memory management controlled by scope, and a simple error handling system providing reliability.
+
+Each subsystem is designed to balance type safety and an improved programming system with vintage system constraints.
+
+The file system abstraction, for example, provides familiar operations while accommodating the specific characteristics of vintage storage devices. Similarly, the object system implements modern programming concepts while maintaining efficient memory use and predictable performance characteristics.
+
+The following sections detail these runtime features, providing both vocabulary and practical usage examples. The abstractions hide much of the underlying complexity and provide increased safety through type checking.
+
+== I/O Subsystem
+I/O operations in Kingfisher are organised into two main categories: <<Console I/O>> and <<File I/O>>. The Console I/O module provides the foundation for Kingfisher's Print functionality, along with input handling through Read, and IsReady operations. These console operations abstract the underlying system-specific details while maintaining full access to the hardware capabilities. <<File I/O>> handles all aspects of file and device access, building upon the host system's native file handling capabilities.
+
+=== Console I/O
+Input and output operations form the foundation of any programming language's interaction with the outside world. Standard abstractions provide console operations with input, output and error streams. Streams provide buffering and error handling features, simplifying the task of I/O operations. 
+
+Three default streams: in, out and err are used to read user input data, output user data to and to notify user of any errors. Usually these streams connect to the system's standard console devices, although they can be redirected to other devices or files as needed.
+
+The std-io module provides the declarations that establish these default streams, which connect to the system's standard console devices by default, but support redirection as needed.
+
+=== Stream Definitions
+Additional streams can be defined as required using the <<Stream Constructors>> from the table below.
+
+Initially the system binds the Input streams to the keyboard device while output streams connect to the screen device. These default bindings can be modified through the stream redirection methods described in subsequent sections.
+
+.Stream Constructors
+[%header, cols="2,3"]
+|===
+|Constructor|Description
+
+|( : ) InputStream name
+|Creates an input stream connected to the default input device
+
+|( : ) OutputStream name
+|Creates an output stream connected to the default output device
+
+|===
+
+[%unbreakable]
+--
+.Console I/O Example
+[source]
+----
+Module std-io
+    // Define the default console input stream
+    InputStream in          
+    
+    // Define the default Console output stream
+    OutputStream out        
+    
+    // Define the default Console error stream
+    OutputStream err
+End
+----
+--
+
+==== Stream Redirection
+Kingfisher's stream architecture allows programs to dynamically redirect input and output operations to different devices or files. This flexibility enables programs to read from or write to various system resources without modifying the underlying code. Stream redirection is accomplished through the Bind method, which accepts a device or file specification as a string parameter.
+
+The `<Input|Output>Stream.Bind`` method provides a uniform interface across different system devices. By accepting string-based device specifications, the language remains independent of system-specific device naming conventions while still providing full access to the underlying hardware.
+
+.Stream Methods
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( String : ) Bind
+|Binds a stream to the specified device
+
+|===
+
+[%unbreakable]
+--
+.Stream Redirection Examples
+[source]
+----
+// redirect output to a file
+"readme" out.Bind         // redirect output to a file
+"TAP:output" out.Bind     // redirect output to Tape
+
+// redirect output to a specific disk, drive and file
+"DSK1:0:output" out.Bind   
+"PRN1:" out.Bind          // redirect to a printer
+"COM1:" out.Bind          // redirect all IO to COM1:
+"COM1:" in.Bind
+
+"SCN:" out.Bind           // reset out to SCN:
+"KBD:" in.Bind            // reset in to KBD:
+----
+--
+
+==== Stream IO Operations
+The core functionality of streams is implemented through three fundamental operations: Read, Write, and IsReady. These methods provide byte-level IO operations that form the foundation for all stream-based data transfer. The IsReady operation allows programs to check input availability without blocking, while Read and Write operations handle the actual data transfer.
+
+In addition to the these core operations there are functions to read and write a line of characters terminated with a new-line (0xA)character, as well as arguments to get and set position of the cursor in the stream buffer.
+
+.Stream IO Methods
+[%header, cols="2,3"]
+|===
+|Method|Description
+
+|( Long : ) GetPos
+|Gets the position of the stream pointer, and returns it as a long. This function is used to get the position in the stream which may not be defined for all devices. Unsupported devices always return 0.
+
+|( : Flag ) IsReady 
+|Checks to see if the input stream is ready
+
+|( : Byte ) Read 
+|Reads a value from the InputStream
+
+|( : Byte ) ReadLn 
+|Reads values from the InputStream until the end of line is reached
+
+|( Long : ) SetPos
+|Positions the stream pointer. This function is used to set the position in the output stream which may not be defined for all devices. Unsupported devices perform a no operation.
+
+|( Byte : ) Write 
+|Writes a value to the OutputStream
+
+|( String : ) WriteLn
+|Writes a string to the output stream terminated with a new line
+
+|===
+
+[NOTE]
+For screen operation the position represents the address from the top left corner of the screen, which is equivalent to `row-number line-length * col-number +`.
+
+[%unbreakable]
+--
+.Stream IO example
+[source]
+----
+InputStream in
+OutputStream out
+
+( | ) EchoServer
+Do
+    True
+While
+    in.IsReady
+    If
+        in.Read out.Write
+    End
+End
+----
+--
+
+==== Stream Error Handling
+Stream operations can encounter various hardware and timing-related issues during device interactions. The stream system provides automatic error recovery mechanisms and supports explicit error handling through OnError statements. This ensures programs can gracefully handle device failures and maintain reliable IO operations.
+
+When redirecting streams, three primary errors may occur:
+
+. *Device Not Present:* The specified device is not connected or available
+. *Device Timeout* The device failed to respond within the expected time
+. *Buffer Overflow:* The stream received more information than it was able to process
+
+All errors will automatically reset the stream to its default device (KBD: for input, SCN: for output) unless handled by an OnError recovery statement.
+
+[%unbreakable]
+--
+.Examples
+[source]
+----
+// Example with error handling
+OnError
+    " PRN1:" out.Bind
+    // ... device operations ...
+Recovery
+    // Handle printer offline/not present
+    " Device error - reverting to screen" Print
+End
+
+// Example without error handling - will auto-reset to SCN:
+// If printer not present, reverts to screen
+" PRN1:" out.Bind   
+----
+--
+
+=== File I/O
+Filesystem operations on vintage systems such as the Commodore machines differ significantly from modern Unix or Windows systems. These early computers had minimal abstraction layers, requiring users to communicate directly with disk drive controllers through low-level commands. This made file operations complex and system-specific.
+
+Kingfisher addresses this complexity through its file-io module, which provides a modern abstraction layer for file operations. This approach allows programmers to work with files using familiar patterns similar to modern languages like Python, while the system handles the underlying vintage hardware interactions transparently.
+
+The file-io module organises storage operations into three main concepts, which are the storage devices for accessing storage medai, volumes for disk operations, and files for individual file management. This separation provides a hierarchy for managing multiple devices, volumes and file level operations. 
+
+==== Storage Devices
+Kingfisher supports three types of storage device, each with their own type of file system. An abstraction layer provides a common interface to all three device types. The drive and filesystem characteristics are described in more detail in the following table.
+
+[%header,cols="1,3"]
+|===
+|Device Type|Description
+
+|SC1-2
+|Up to two SD Card interfaces using an SPI interface
+
+8 x 1GB partitions +
+512 files per partition +
+Max file size = 1GB
+
+|SD1-8
+|Up to Commodore compatible serial or parallel disk drives.
+Abstract interface removes requirement to deal with Commodore drive interface directly. No secondary addressing required +
+
+|SE1-8
+|8 x 128/256KB Serial EEPROM devices using an I2C interface. Max possible device size is 1MB  
+
+File size limited by device size
+30 files max 128KB
+62 files max 256KB
+
+(128KB each, hardware-linked I2C addresses)
+
+|===
+
+==== Device IDs and File Names
+Storage devices in Kingfisher use a standardised naming convention that provides consistent access across different device types. The system employs an addressing scheme to identify specific devices, drives and partitions within the storage system.
+
+Device identifiers follow a structured format combining device type (SD, SC, or SE) and unit number. The system uses a colon delimiter to separate device, drive and partition specifications. For example, "SD1:0" references drive zero on Commodore device SD1, whilst "SC1:7" indicates partition 7 on SD-Card number 1.
+
+File naming follows established conventions whilst accommodating the specific requirements of vintage systems. Names may contain up to 16 characters for standard devices, extending to 29 characters on SD Card systems. The system reserves certain characters for special purposes within the file system. The system also provides wildcard characters for flexible file matching - the asterisk matches any sequence of characters from its position to end of name, whilst the question mark matches exactly one character at the corresponding position.
+
+Device identifiers can include volume names using the forward slash (/) separator. For example, "home/readme" references a file called "readme" on the volume named "home". When no volume is specified, the system uses the default volume, named "home".
+
+
+.Special Characters
+[%header, cols="1,3"]
+|===
+|Character|Purpose
+
+|/
+|Separates volume names from file names
+
+|:
+|Separates device identifiers from file specifications 
+
+|*
+|Matches any sequence of characters from its position to end of name
+
+|?
+|Matches exactly one character at the corresponding position
+|===
+
+[NOTE]
+File names must not contain the special characters listed in the table above, as these are reserved for system use. Using these characters in file names will result in invalid file specifications.
+
+[%unbreakable]
+--
+.Device and File Name Examples
+[source]
+----
+"SD1:0:program"     // Device SD1, drive 0, file "program" 
+"home/readme"       // 
+"prog????.dat"      // Matches "prog" plus any 4 chars + ".dat"
+"test*"             // Matches all files beginning with "test", from th default volume
+----
+--
+
+==== File System and Volume Management 
+Access to file systems in Kingfisher is provided through volume objects. The volume object abstracts device IDs, allowing users to provide more meaningful names for the intended use. A default volume called "home" is mounted during boot.
+
+Volumes provide disk-level operations for managing storage devices. These operations handle device initialisation, status monitoring, and directory management. Each volume represents a filesystem on a physical storage device in the system.
+
+Before files can be created or accessed, a volume must be mounted and initialised. This abstraction allows programs to work with different storage devices uniformly, whether they are physical drives or other storage media.
+
+.File System Words
+|===
+|Operation|Description
+
+|( String : ) Mount name
+|Mount the device specified in string to the mount point called name
+
+|( : ) Unmount name
+|Disconnect the named volume. The volume does not get deleted but stays in the unmounted state until a device is mounted
+
+|( : ) Volumes  
+|List all the available volumes and their status to the output stream
+
+|( : ) IsReady name
+|Check if named Volume is mounted and accessible 
+
+|( : ) Info name
+|Get extended information for the named volume: +
+
+Device ID +
+Filesystem capacity +
+Filesystem Usage 
+
+|( String String : ) Copy
+|Copy file-path1 in N to file-path2 in T
+
+|( String : ) Create
+|Create a new file using the specified name
+
+|( String : ) Delete
+|Delete the specified file
+
+|( String1 String2 : ) Rename
+|Changes the name of the file specified in N to the name specified in T
+
+|( [String] : ) List
+| List all the files, applying the optional specified filter 
+
+|===
+
+==== File Operations
+File objects provide the primary interface for reading and writing data to storage devices. These operations manage individual files within a volume, handling tasks such as creation, deletion, and modification of file content.
+
+Files in Kingfisher build upon the volume abstraction layer to provide consistent access across different storage systems. Each file object maintains its own state including mode, position, and associated volume, allowing multiple files to be handled simultaneously.
+
+The file system implements standard operations like open, close, read, and write while managing the complexities of vintage hardware interactions transparently. This approach enables familiar file handling patterns while ensuring reliable operation on classic hardware.
+
+.File Constructor
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( String : ) File name
+|Create a file object called name using the file path specified in string
+
+|===
+
+.File Methods
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : ) Close 
+|Close the file
+
+|( String Byte : ) Open
+|Open the file name specified in N using the specified mode T
+
+|( ByteArray : Var ) Read
+|Read max of array length into array T. Returns number of bytes read
+
+|( String : ) ReadLn
+|Read max of string length into string T or until new line
+
+|( ByteArray Var : ) Write
+|Write max of array length or T bytes from byte array
+
+|( String : ) WriteLn
+|Write string length bytes from string T followed by a newline
+
+|===
+
+[NOTE]
+Seek operations are not supported. On Commodore devices only USR file types are supported. Other file types should be converted to USR before using with Kingfisher, this way there is no confusion between Commodore and Aves files
+
+==== File Modes
+File modes control how Kingfisher interacts with files during read and write operations. Each mode provides specific access patterns that determine whether a file can be read, written, or appended to. The mode must be specified when opening a file and remains fixed until the file is closed.
+
+.File Mode Modifiers
+[%header, cols="^1,6"]
+|===
+|Mode|Description
+
+|'a'
+|Append mode - Opens the file for adding data to the end
+
+|'c'
+|Create mode - Creates a new file only. Returns an error if the file already exists.
+This is the safest mode for creating new files as it prevents accidental overwrites.
+
+|'r'
+|Read mode - Opens an existing file for reading
+
+|'w'
+|Write mode - Opens an existing file for writing.
+
+WARNING: Due to the infamous "save-with-replace" bug in Commodore DOS firmware, this mode may corrupt existing files on certain drives. To avoid this Kingfisher does not use or support the CBM DOS "@filename" syntax. Write mode instead uses rename, create delete to achieve the same thing safely. 
+|===
+
+[%unbreakable]
+--
+.File Examples
+[source]
+----
+// Mounts two drives on separate volumes
+"DSK1:0" root.mount vol1              // Drive zero of disk 1
+
+// Create a file, file must not exist
+( : ) Def WrHello
+    "vol1/hello.kf" 'c' Open f1     // Create a file object
+
+    // open file for create, must not exist
+    "Hello, world!" f1.WriteLn        // Write message
+    f1.Close                            
+End
+
+// Read a file
+( : ) Def RdHello
+    10 String msg                   // 
+
+    // open file for create, must not exist
+    "hello.kf" 'r' Open f1          // open hello.kf for read
+    msg f1.ReadLn                   // Read message into string
+    f1.Close                            
+End
+----
+--
+
+=== Operating System Management
+Kingfisher provides a comprehensive set of operating system management operations through the `os` module. These operations enable file and volume management similar to contemporary operating systems, with commands optimised for command-line usage.
+
+The operations support essential file system tasks including copying, creating, deleting, formatting, renaming and validating files and volumes. Each operation is designed to work consistently across different storage devices.
+
+.Operating System Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( : ) Copy( <file-path1> <file-path2> )
+|Copy file-path1 to file-path2 
+
+|( : ) Mount( name "device-id" )
+|Mount the device-id and create a volume called name
+
+|( : ) New( <file-path> )
+|Create a new file called file-path
+
+|( : ) Delete( <file-path> )
+|Delete the file called file-path
+
+|( : ) Format( <device-id> <media-name> )
+|Format the volume ready for use
+
+|( : ) Rename( <file-path1> <file-path2> )
+|Changes file-path1 to file-path2
+
+|( : ) Validate( <device-id> )
+|Checks the media for errors, and ensures that all used blocks are marked correctly
+|===
+
+[NOTE]
+Parameters in angled indicate that strings without spaces can be used without using quoutes
+
+[%unbreakable]
+--
+.Operating System Example
+[source]
+----
+// Format a device
+Format( se1 )
+Validate ( se1 )       
+
+// Create and copy files
+New( readme.txt )
+Copy( readme.txt readme.bak )
+Rename( readme.bak readme.bk1 )
+List( *.prg )
+----
+--
+
+== System Primitives
+System primitives provide a means to access and manage fundamental system resources including Dictionary, and Heap. These data structures are discussed in more detail in the <<Fundamental System Structure>> section in Part VI. 
+
+System primitives form the foundation for extending and customising the Kingfisher compiler. They provide essential capabilities for implementing new word types and managing system resources. Developers can control memory allocation and manipulation through system primitives, while maintaining safe boundaries between different parts of the system. These primitives also enable manipulation of the system state, making them crucial for low-level system operations and compiler extensions, without accessing the resources directly.
+
+The Compiling primitive allows words to determine whether they are being executed during compilation or runtime. This enables conditional behavior based on the compilation state, which is essential for implementing compiler directives and runtime checks.
+
+[NOTE]
+--
+System primitives have access to critical system resources. Their use requires careful consideration of system stability. Incorrect usage can compromise system integrity.
+--
+
+.Fundamental System Words
+[%header, cols="2,3"]
+|===
+|Operation |Description
+
+|( Pointer : Var ) !Addr
+|Tells the Compiler to treat the ptr Addr as a Var type. The size of addr must be the same as Var. This word has no effect on runtime code or code generation.
+
+|( Pointer : Var ) !AsVar
+|Is used during compilation to tell the compiler to use a Var to represent an address type. The size of addr must be the same as Var. This word has no effect on runtime code or code generation.
+
+|( Var Var Var : ) !Clone
+|Copies the byte values from the source address B to destination N, length T
+
+|( : ) !Compile
+|Switch to compilation mode
+
+|( : Flag ) !Compiling
+|Returns true if the system is currently compiling a definition, false if executing
+
+|( : ) !Create name
+|Allocates dictionary space and creates a new entry with the specified name and signature
+
+|( String String : Var Var) !Find
+|Search all scope chains to find the word that matches the name in N and signature in T and return the Vocabulary's and name word's field addresses
+
+|( : ) !Forward name
+|Adds name to forward reference list during compilation
+
+|( Var : Scalar ) !Get<Scalar>
+|Returns the scalar value from address in T
+
+|( : ) !Interpret
+|Switch to interpretation mode
+
+
+|( : ) !Recurse
+|Compiles a call to the word currently being defined
+
+|( String String : Var ) !Ref
+|Search the Vocabulary in the active chain only for the word that matches the name in N and signature in T and return the name field address
+
+|( : ) !Resolve name
+|Resolves pending forward references for named word
+
+|( Scalar Var : ) !Set<Scalar>
+|Stores the scalar value N at address T
+
+|===
+
+--
+.System Primitive Examples
+[source]
+----
+// Example of compile-time vs runtime behavior
+( : ) Def CompileTimeCheck
+    Compiling If
+        "Compiling..." Print    // Only prints during compilation
+    Else
+        "Running..." Print      // Only prints during execution
+    End
+End
+----
+--
+
+--
+.Compiler Bootstrap Example
+[source]
+----
+// Bootstrap compiler definition example
+( String : ) !Create Def
+    !Compile      
+    Forward End   // Add End to forward references
+
+( : ) Def End
+    !Interpret
+    Recurse       // Handle nested definitions
+
+Resolve End      // Resolve the forward reference to End
+----
+--
+
+--
+.Compile-Time Checking Examples
+[source]
+----
+// Example of compile-time only operation
+( : ) Def CompileTimeOnly
+    Compiling Not If
+        "This word can only be used during compilation" Error
+    End
+    // ... compilation specific code ...
+End
+
+// Example of Runtime Clone operation
+( Var Var : ) Def SafeClone
+    // Runtime copy operation
+    Dup Size Clone
+End
+----
+--
+
+== Memory Management
+Memory management in Kingfisher operates through two complementary mechanisms that work together to provide flexible and efficient memory utilisation during program execution. The dictionary system manages program definitions and code storage, whilst the heap system handles dynamic runtime allocation needs.
+
+When creating new definitions, the dictionary system automatically manages memory allocation, growing as needed to accommodate new entries. This automatic management ensures efficient use of memory for program structures, though direct control remains available for advanced operations. The dictionary grows upward from low memory, maintaining a linked structure that allows for both addition and removal of definitions during program execution.
+
+The heap system provides complementary functionality for dynamic memory allocation during program execution. Operating from high memory downward, the heap allows programs to request and release memory blocks as needed. This dynamic allocation proves particularly useful when working with data structures whose size cannot be determined at definition time, or when temporary working space is required.
+
+=== Dictionary Operations
+Dictionary memory allocation occurs primarily through the creation and removal of definitions. The system manages the memory automatically, though direct control remains available through specific operations.
+
+.Dictionary Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+
+|( String : ) !Create name
+|Allocates dictionary space and creates a new entry with the specified name and signature
+
+|( String : Var Var) !Find name
+|Search all scope chains to find the word that matches the name and signature and return the Vocabulary name field address and name field address
+
+|( String : Var ) !Ref name
+|Search the Vocabulary in the active chain only for the word that matches the name and signature and return the name field address
+
+|( String : Var ) !Forget name
+|Removes the named definition and all subsequent entries from the dictionary, releasing dictionary space
+
+|===
+
+=== Heap Operations
+The heap system provides direct control over memory allocation through two primary operations. These operations allow for both allocation and deallocation of memory blocks as needed during program execution.
+
+.Heap Management Words
+[%header, cols="2,3"]
+|===
+|Operation|Description
+|( Var : Var ) !Allot
+|Allocates the specified number of bytes and returns the base address of the new memory block
+|( Var : ) !Free 
+|Releases all memory allocated after the specified address
+|===
+
+[%unbreakable]
+--
+.Memory Management Example
+[source]
+----
+( : ) Def ArrayExample
+    100 !Allot     // Request 100 bytes of heap memory
+    Dup            // Keep a copy of the base address
+    50 + !Free     // Free memory from base+50 upward
+End
+----
+--

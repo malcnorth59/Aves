@@ -1,0 +1,1058 @@
+= Reference Sections
+The Kingfisher system combines modern software development practices with vintage computing concepts to create a robust and flexible development environment. This reference section provides comprehensive documentation of the system's core components, error handling mechanisms, and hardware interfaces.
+
+Each section presents detailed technical specifications, starting with system-level features like error handling and configuration, then progressing through to hardware-specific implementations. The documentation includes practical examples and detailed tables that illustrate key concepts and usage patterns.
+
+== System References 
+The system references section covers fundamental aspects of Kingfisher's operation, beginning with error handling mechanisms, followed by system configuration options, and concluding with system constants. These components form the foundation for reliable application development.
+
+=== Error Message Reference
+This section provides a comprehensive reference for all system error messages in Kingfisher. Errors are categorised by their functional area and severity, allowing for systematic error handling in applications. Each error is uniquely identified by a hexadecimal code and belongs to a specific category range.
+
+The first table shows the error categories and their hexadecimal ranges. The second table provides detailed information for each error, including its message, the condition that triggers it, and recommended recovery actions.
+
+.Error Categories
+[cols="1,1,2"]
+|===
+|Symbolic Name |Range |Category Name
+|EC-ARITH |0x00-0x1F |Arithmetic Operations
+|EC-STACK |0x20-0x3F |Stack Operations
+|EC-DICT |0x40-0x5F |Dictionary Operations
+|EC-SYS |0x60-0x7F |System Resources
+|EC-IO |0x80-0x9F |I/O Operations
+|EC-MEM |0xA0-0xBF |Memory Management
+|EC-COMP |0xC0-0xDF |Compilation
+|EC-RSVD |0xE0-0xFF |Reserved
+|===
+
+.Error Message Reference
+[%header, cols="1,1,2,3"]
+|===
+|Code|Category|Error Message |Recovery Action
+
+|0x00
+|EC-OK
+|Success
+|Implement OnError block to handle division by zero: return a default value, log the error, or propagate to caller
+
+|0x01
+|EC-ARITH
+|Divide by zero
+|Implement OnError block to handle division by zero: return a default value, log the error, or propagate to caller
+
+|0x60
+|EC-SYS
+|End of iteration
+|Terminate the loop and stop iteration
+
+|0x42
+|EC-DICT
+|Index out of bounds
+|Add bounds checking before access: verify index < collection.size. Consider using safe access methods
+
+|0xC1
+|EC-COMP
+|Local name > 8 chars
+|Shorten the name
+
+|0x21
+|EC-STACK
+|Stack overflow
+|Increase stack depth, and check stack signatures
+
+|0x20
+|EC-STACK
+|Stack underflow
+|Add stack depth checking
+
+|0x43
+|EC-DICT
+|String not found
+|Implement recovery block to either; create missing string, use default value, or terminate with error message
+
+|0xC2
+|EC-COMP
+|Type mismatch
+|Ensure type compatibility
+
+|0x41
+|EC-DICT
+|Unknown Word
+|Check word exists before execution, or implement word lookup fallback mechanism in current scope
+
+|0xC0
+|EC-COMP
+|Unsupported type
+|Change type before calling the definition
+
+|0xC3
+|EC-COMP
+|Value out of range
+|Select a different type
+
+|0x40
+|EC-DICT
+|Word exists in this scope
+|Choose unique name
+
+|0xC4
+|EC-COMP
+|Word is compile only
+|Use word inside a definition
+
+|0x80
+|EC-IO
+|Device not responding to requests
+|Check drive power and connections
+
+|0x81
+|EC-IO
+|Filesystem unavailable
+|Mount a valid filesystem with the mount command
+
+|0x82
+|EC-IO
+|Disk Error: <drive status message>
+|Consult the manufacturers drive documentation
+
+|0x83
+|EC-IO
+|Disk Write protected
+|Remove write protection or try another disk
+
+|0x84
+|EC-IO
+|File not Found
+|Check the file name and try again
+
+|0x85
+|EC-IO
+|File exists
+|Change the file name or file open mode
+
+|0x86
+|EC-IO
+|File Error <file-error-message> 
+|Consult the manufacturers drive documentation
+
+|0x40
+|EC-DICT
+|Dictionary Full
+|Remove unused vocabularies from dictionary
+
+|0x41
+|EC-DICT
+|Word does not exist
+|Check spelling of name or make sure word exists
+
+|0x42
+|EC-DICT
+|Name Exists
+|Change spelling of new word
+
+|0xA0
+|EC-MEM
+|Out Of Memory 
+|Review memory usage, reduce string and array sises. Remove unused vocabularies
+
+|===
+
+== Technical Background
+This section provides comprehensive documentation for the Kingfisher development environment. This guide details the core components, methods and patterns that enable effective software development within the Aves platform ecosystem. Kingfisher implements its own stack-based programming language, providing a fresh approach to 8-bit system development.
+
+The technical architecture reflects this heritage whilst incorporating considered enhancements. At its core, Kingfisher maintains compatibility with classic hardware paradigms, particularly the Commodore approach to device management and memory organisation. This design philosophy enables the system to support both vintage hardware and retro 8-bit Aves platforms through a unified interface. The also will be expanded to include a range of 16 bit models as well.
+
+The system architecture implements established conventions from the 8-bit era, such as device numbering and memory mapping, whilst updating the architecture with expanded I/O capabilities and enhanced memory management. This balance of traditional and enhanced features creates a robust foundation for classic stack-based software development.
+
+Through its modular design, Kingfisher accommodates various hardware configurations across the Aves family of systems. The architecture provides consistent interfaces for peripheral access, memory management, and system resources, allowing developers to create portable applications that function across multiple platforms within the Aves ecosystem.
+
+=== System Architecture
+The Kingfisher system architecture builds upon established 8-bit computing principles, emphasising simplicity and efficient resource utilisation. Early home computers established fundamental patterns through ROM-based firmware and embedded language systems, an approach that proved both reliable and effective. Kingfisher extends these principles whilst maintaining compatibility with vintage software and hardware designs.
+
+==== Operating System Design
+Early home computer manufacturers provided ROM-based firmware and embedded BASIC interpreters rather than complex operating systems. This approach delivered immediate system availability and efficient operation within 8-bit hardware constraints. Commodore developed this concept further by implementing external disk operating systems, preserving valuable system memory by offloading storage operations to dedicated controllers.
+
+The Kingfisher operating system maintains a similar pattern whilst extending system capabilities. Core functionality resides in ROM, providing reliable operation and immediate availability upon system startup. The ROM contains the kernel, compiler, interpreter, editor and command line interface. Direct hardware access occurs through memory-mapped I/O, following established patterns for device interaction. Additional features load from external storage when required, enabling system customisation without compromising core functionality.
+
+The modular design supports hardware expansion through multiple serial protocols, enabling the use of a wide variety of different hardware configurations. This approach maintains the simplicity and reliability inherent in ROM-based systems.
+
+==== Hardware Implementation
+The Aves hardware platform implements core system functionality through carefully selected enhancements to vintage designs. Custom video and audio subsystems maintain software compatibility whilst providing expanded capabilities. CMOS variants of classic processors deliver improved efficiency whilst preserving instruction set compatibility. the following <<Processor Options>> Table show the processors provided by Aves and supported by Kingfisher
+
+.Processor Options
+[%header, cols="2,4"]
+|===
+|Processor|Implementation
+
+|6502
+|Standard MOS instruction set
+
+|65C02
+|Enhanced CMOS instruction set
+
+|65816
+|Extended 16-bit instruction set
+
+|===
+
+==== Input/Output System
+Device management implements the Commodore convention for peripheral addressing, ensuring straightforward integration with existing software. The system supports both traditional peripherals and enhanced expansion options through a consistent device numbering scheme.
+
+.Device Assignments
+[%header, cols="^1,4"]
+|===
+|Device|Function
+
+|0|Keyboard input
+|1|Cassette interface
+|2|RS232 and I2C UART functions
+|3|Display output
+|4-5|Printer operations
+|6|I2C expansion interface
+|7|SPI expansion interface
+|8-15|Disk operations
+
+|===
+
+==== Memory
+The Kingfisher system implements a flexible memory architecture that builds upon established 8-bit computing principles. This organisation provides efficient usage of ROM and RAM, and provides sufficient capacity for both ROM and RAM based applications.
+
+Memory management divides the 64K address space into distinct functional regions. System RAM occupies the lower 32K, providing workspace for applications and system variables. The zero page and stack occupy the first 512 bytes of RAM, following traditional 6502 architecture conventions for optimal performance.
+
+The upper memory regions contain system firmware, I/O device registers and boot code. This arrangement ensures critical system functions remain accessible regardless of RAM banking or paging operations. The firmware region houses the Kingfisher implementation alongside essential system routines, whilst dedicated I/O space provides consistent peripheral access.
+
+The memory architecture does not use banking, instead serial memory is used for file storage, while other models use the 65816's segmented 24 bit address capability to address more than 64K RAM, however the base memory in segment 0 remains consistent.
+
+.Memory Capacity
+[%header, cols="2,2,3"]
+|===
+|Memory Space|Sises|Usage
+
+|System ROM
+|32K EPROM +
+128K FLASH
+|Firmware and system routines
+
+|Main RAM
+|32K +
+128K +
+512K
+|Application workspace
+
+|Extended Storage
+|128K +
+256K
+|I2C EEPROM (optional)
+
+|Expansion
+|SD-CARD etc.
+|I2C/SPI interfaces
+|===
+
+[NOTE]
+Extended storage availability depends upon hardware configuration and platform implementation.
+
+.Base System Memory Map
+[%header, cols="2,2,3"]
+|===
+|From|To|Usage
+
+|0x0000
+|0x7FFF
+|RAM - System RAM
+
+|0x8000
+|0xF7FF
+|EPROM - Firmware, Kingfisher, Talon, Kernel
+
+|0xF800
+|0xFBFF
+|I/O
+
+|0xFC00
+|0xFFFF
+|EPROM - Memory test and boot
+|===
+
+[NOTE]
+Zero page occupies 0x0000-0x00FF, with system stack at 0x0100-0x01FF.
+
+[%unbreakable]
+--
+.Memory Map Example
+[source]
+----
+0x8000 Constant ROM-BASE    // Start of system ROM
+0x0000 Constant RAM-BASE    // Start of system RAM
+0x7FFF Constant RAM-TOP     // Top of standard RAM
+----
+--
+
+==== Vintage Operating Systems
+The first generation of home computers did not have operating systems like modern day operating systems. Instead manufacturers provided ROM based firmware and an embedded language, usually BASIC. The likes of Commodore, Apple, Atari and Acorn adopted this approach to great effect and also published software on ROM based expansion cartridges. In fact many of these systems did not have Disk drives and relied on tape drives to save programs and data.
+
+Commodore pioneered the idea of off loading the work of running the Disk Operating System (DOS) onto a separate device but did not provide any form of filesystem abstractions in most of the BASIC Interpreters due to memory limitations. 
+
+=== Development References
+The Development Reference section provides comprehensive documentation for the Kingfisher development environment. This guide details the core components, methods and patterns that enable effective software development within the Aves platform ecosystem, with particular focus on Kingfisher's unique stack-based programming environment.
+
+==== Kingfisher Lexicon
+A categorised index of all of Kingfishers bespoke words can be found in the <<Kingfisher Words by Category>> section below.
+
+.Kingfisher Words by Category
+[%header, cols="2,3"]
+|===
+
+|Reference|Category
+|<<Stack Words>>
+.5+|Stack manipulation words
+|<<Arithmetic Words>>
+|<<Bitwise Words>>
+|<<General Words>>
+|<<Type Conversion Words>>
+
+|<<Variable Constructors>>
+.2+|Variables
+|<<Variable Methods>>
+
+|<<Array Constructors>>
+.6+|Collections
+|<<Array Methods>>
+|<<Typed Array Methods>>
+|<<StrArray Constructors>>
+|<<StrArray Methods>>
+|<<Collection Iteration Words>>
+
+|<<Bootstrap Words>>
+.5+|Bootstrap, Scope and Vocabulary
+|<<Chain methods>>
+|<<Vocabulary Constructor>>
+|<<Module Words>>
+|<<Alias Word>>
+
+|<<Type Definition Words>>
+.6+|Type definition
+|<<Scalar Vocabulary Words>>
+|<<ShortSeq Vocabulary Words>>
+|<<Sequence Vocabulary Words>>
+|<<Type Field Words>>
+|<<Dataset Methods>>
+
+|<<Boolean Words>>
+.2+|Boolean and conditional operators
+|<<Conditional Words>>
+
+|<<If Branch Operations>>
+.2+|Branches
+|<<Case Branch Operations>>
+
+|<<While Loop Words>>
+.2+|Loops
+|<<For Loop Words>>
+
+|<<Error Handling Words>>
+.5+|System
+|<<Error Methods>>
+|<<Fundamental System Words>> 
+|<<Dictionary Words>>
+|<<Heap Management Words>>
+
+|<<Label Word>>
+.6+|Assembly
+|<<Data Definition Directives>>
+|<<Section control>>
+|<<Assembly Language Words>>
+|<<System Data Constructors>>
+|<<System Data Methods>>
+
+|<<Stream Constructors>>
+.2+|Stream IO
+|<<Stream IO Methods>>
+
+|<<File System Methods>>
+.3+|File IO
+|<<Volume Methods>>
+|<<File Methods>>
+
+|===
+
+=== Perch CLI Reference
+The Perch Command Line Interface provides interactive access to the Kingfisher development environment through a REPL (Read-Eval-Print Loop). It combines traditional command line functionality with enhanced features for command editing and history navigation, whilst maintaining compatibility with vintage keyboard layouts.
+
+The interface preserves commands in a 256-byte buffer, allowing developers to recall and modify previous entries. Command editing capabilities include cursor movement, character insertion and deletion, and line manipulation functions.
+
+.Command Line Features
+[%header, cols="2,3"]
+|===
+|Feature|Description
+
+|History Buffer
+|256-byte circular buffer for command storage
+
+|Line Editing
+|Full cursor movement and text manipulation
+
+|Command Recall
+|Forward and backward history navigation
+
+|Character Support
+|Mapped special characters for vintage keyboards
+
+|===
+
+.Control Key Mappings
+[%header, cols="2,1,3"]
+|===
+|Command|Contol Key|Function
+
+|Backspace
+|^H
+|Delete the character to the left of the cursor and move left one space
+
+|Break
+|^C
+|Stop the running program (can be overridden)
+
+|CrsrDown
+|^S
+|Move cursor down one space
+
+|CrsrEnd
+|^E
+|Move cursor to end of line
+
+|CrsrHome
+|^Q
+|Move cursor to beginning of line
+
+|CrsrLeft
+|^A
+|Move cursor left one space
+
+|CrsrRight
+|^D
+|Move cursor right one space
+
+|CrsrUp
+|^W
+|Move cursor up one space
+
+|DelChar
+|DEL
+|Deletes the character under the cursor
+
+|DelLine
+|^L
+|Clear the entire line
+
+|InsMode
+|INST
+|Toggles insert mode (default is on)
+
+|===
+
+[%unbreakable]
+--
+.Usage Example
+[source]
+----
+> 10 Constant Test ok    // Define constant then prompt ok
+> Test Print 10 ok       // Print the test value
+> // Recall previous command with :^W
+Test Print
+----
+--
+
+=== Talon IDE Reference
+The Talon IDE provides a full-screen text editor optimised for the Kingfisher development environment. It combines efficient screen usage with flexible editing capabilities while respecting the constraints of vintage hardware. The editor supports both vertical and horizontal scrolling, with configurable margins to maximise usable screen space on displays ranging from 30 to 100 columns wide.
+
+The interface balances functionality with simplicity through a two-line menu system. The top menu line presents command categories, while the second line provides contextual descriptions of available operations. All editor functions are accessible through both menu selection and direct control key commands, accommodating different user preferences and keyboard layouts.
+
+Text manipulation features include both character-level horizontal selection and line-level vertical selection, enabling precise editing control. The display automatically manages available space between the edit area, debug panel, and menu overlay to maintain optimal visibility of the working text. Vertical scrolling operates line by line, while horizontal scrolling moves by screen width with configurable margins up to 100 character line lengths.
+
+The following tables provide comprehensive references for editor commands and display specifications across the range of supported hardware configurations.
+
+While Commodore machines traditionally use PETSCII encoding, Kingfisher implements standard ASCII character encoding. This provides better compatibility across the Aves platform family whilst maintaining consistent text representation. On the Commodore 64 and Aves machines, CodePage 437 is also available, offering extended character support. The PETSCII graphics character set is not currently supported.
+
+It should be noted that on Commodore hardware, the uppercase and lowercase character sets are transposed compared to standard ASCII - uppercase characters occupy the codes normally used for lowercase and vice versa. Kingfisher handles this transparently, ensuring consistent text display across all supported platforms.
+
+.Editor Commands
+[%header, cols="1,1,1,3"]
+|===
+|Command|Menu Item|Ctrl Key|Description
+
+|Backspace
+|--
+|^H
+|Deletes the character to the left of the cursor, and moves the cursor left one space
+
+|CrsrDown
+|--
+|^S
+|Move cursor down one space. Also cursor down key
+
+|CrsrEnd
+|--
+|^E
+|On first press move cursor to end of line, on second press go to bottom right of display
+
+|CrsrHome
+|--
+|^Q
+|on first press move cursor to beginning of line, on second press go to top left of display. Or go directly to the top left by pressing the home key
+
+|CrsrLeft
+|--
+|^A
+|Move cursor left one space. Also cursor left key
+
+|CrsrRight
+|--
+|^D
+|Move cursor right one space. Also cursor right key
+
+|CrsrUp
+|--
+|^W
+|Move cursor up one space. Also cursor up key
+
+|DelLine
+|--
+|^L
+|Clear the entire line. Press again clears the screen. Or clear the entire screen with the clr key
+
+|DelChar
+|--
+|INST/DEL
+|Deletes the character under the cursor
+
+|EditBegin
+|edit-begin +
+Menu-E-B
+|^B
+|Marks the beginning of an area of text
+
+|EditCopy
+|edit-copy +
+Menu-E-C
+|^C
+|Copy the marked text into a temporary buffer
+
+|EditE£xtract
+|edit-extract+ 
+Menu-E-X
+|^X
+|Extract the marked text into a temporary buffer
+
+|EditEnd
+|edit-end +
+Menu-E-N
+|^N
+|Marks the end of a text area
+
+|EditPaste
+|edit-paste +
+Menu-E-V
+|^V
+|Paste the text from the temporary buffer into the editor
+
+|FileNew
+|file-new +
+Menu-F-N
+|--
+|Create an empty file and clear all edit buffers
+
+|FileInsert
+|file-insert +
+Menu-F-I
+|--
+|Insert an existing file into memory starting at the line before the current line
+
+|FileOpen
+|file-open +
+Menu-F-O
+|--
+|Load an existing file int0 memory replacing existing contents
+
+|FileSave
+|file-save +
+Menu-F-S
+|--
+|Backup the existing file to a new name and save the current file
+
+|FileClose
+|file-close +
+Menu-F-C 
+|--
+|Close the file and clear memory
+
+|FileExit
+|file-exit +
+Menu-F-X
+|--
+|Checks if all changes have been saved and exits the editor
+
+|SearchFind
+|search-find +
+Menu-S-F
+|^F
+|Search file from current position until a match is found
+
+|SearchGoto
+|search-goto +
+Menu-S-G
+|^G
+|Goto a specific line number
+
+|SearchNext
+|search-next +
+Menu-S-N
+|^N
+|Moves to the next matching pattern
+
+|SearchOptCase
+|search-opt-case +
+Menu-S-O-C
+|^O
+|Toggle case sensitivity option
+
+|SearchOptGlobal
+|search-opt-global +
+Menu-S-O-G
+|^O
+|Toggle global replace option
+
+|SearchOptWord
+|search-opt-word +
+Menu-S-O-W
+|^O
+|Toggle match complete word only option
+
+|SearchReplace
+|search-replace +
+Menu-S-R
+|^R
+|Replace matched patterns with replacement text
+
+|ViewDebug
+|view-debug +
+Menu-V-D
+|--
+|Switch to Debug View
+
+|ViewEdit
+|view-edit +
+Menu-V-E
+|--
+|Switch to Editor View
+
+|ViewSplit
+|view-split +
+Menu-V-S
+|--
+|Switch to Split View, which shows a view of the editor in the upper part of the screen and the REPL in the lower part
+
+|ViewSwitch
+|view-toggle +
+Menu-V-T
+|^T
+|Toggle which view; Debug or Edit 
+
+|OptionsConfig
+|option-config +
+Menu-O-C
+|--
+|Configure options 
+|===
+
+.Display Specifications
+[%header, cols="1,1,1,1"]
+|===
+|Model|Width|Height|Colours
+
+|Commodore PET
+|40
+|25
+|Mono
+
+|Commodore CBM-80XX
+|80
+|25
+|Mono
+
+|Commodore VIC-20
+|30
+|30
+|8 Colours
+
+|Commodore C64
+|40
+|25
+|16 Colours
+
+|Aves Sparrow
+|50
+|30
+|16 Colours
+
+|Aves Dunnock
+|100
+|30
+|Mono
+
+|Aves Robin
+|22-30
+|23-30
+|8 Colours
+
+|Aves Blackbird
+|40
+|25
+|16 Colours
+
+|Aves Starling
+|40
+|25
+|16 Colours
+
+
+|===
+
+.Keyboard Mapping
+[%header, cols="2,1,1,1,1,1,1"]
+|===
+|Model|Menu|TAB|Control|Delete|Backspace|Insert 
+
+|PET
+.2+|<-
+|--
+.2+|Off/RVS
+|--
+.4+|INST/DEL
+.2+|SHIFT {plus} +
+INST/DEL
+
+|CBM 80XX
+|Tab 
+|Run/Stop
+
+|VIC-20
+.2+|<-
+.2+|Ctrl
+.2+|C=
+.2+|F1
+.2+|F3
+
+|C-C64
+
+|Aves Sparrow
+.5+|Esc
+.5+|Tab
+.5+|Control
+.5+|Del
+.5+|Backspace
+.5+|Ins
+
+
+|Aves Dunnock
+
+|Aves Robin
+
+|Aves Blackbird
+
+|Aves Starling
+
+|===
+
+.Configuration options
+[%header, cols="2,2,3"]
+|===
+
+|Option|Value|Description
+
+|Margin size
+|0-20
+|Horizontal scrolling margin (default=15, disable=0)
+
+|Editor window
+|(screen-height-4)-5
+|The line where the editor/debug windows split 
+
+|===
+
+=== Historical Context
+The story of Kingfisher begins with Commodore's revolutionary approach to personal computing in the late 1970s. Commodore's acquisition of MOS Technology and their vision of creating "computers for the masses, not the classes" established fundamental patterns that would influence home computing for decades. The PET 2001-8N, with its integrated design and innovative use of the 6502 CPU, set standards for efficient, cost-effective computing that remain relevant today.
+
+Project Aves emerged from a desire to preserve and enhance these proven design principles while embracing modern capabilities. Where Commodore pioneered intelligent peripherals and efficient memory usage, Aves reimagines these concepts using contemporary CMOS components. This approach maintains compatibility with classic architectures while delivering improved efficiency and expanded capabilities.
+
+==== Origins and Inspiration
+The original PET 2001-8N's integrated design demonstrated how thoughtful hardware architecture could maximise limited resources. Aves builds upon this foundation, replacing original components with modern CMOS equivalents while preserving the elegant simplicity of Commodore's approach. This careful balance of vintage compatibility and modern enhancement enables Kingfisher to bridge past and present computing paradigms.
+
+==== Technical Evolution
+While Aves began as a hardware-focused initiative to recreate Commodore's 8-bit systems, it quickly became apparent that software development would play a crucial role. Modern components like SD-Cards and serial memories demanded new interfaces, while preserving compatibility with classic software required careful adaptation of the original architecture. The built-in Basic interpreter not only lacked support for storage, it also lacked support for the customer silicon, was not easily extended and was very slow. The built in editor was better than most of Commodore's competitors but it was still very limited. This dual focus on hardware and software development has shaped Kingfisher's evolution.
+==== Design Philosophy
+The design philosophy for Kingfisher emphasises efficiency and purposeful enhancement of proven 8-bit computing principles. The system implements a minimal ROM-based architecture that provides essential system functions while maintaining direct hardware access through memory-mapped I/O. This approach follows established 6502 conventions for memory organisation, particularly in its use of zero-page and stack addressing.
+
+The hardware platform builds upon classic 8-bit architectures through considered enhancement. Modern CMOS components like the 65C02 CPU and 65C22 VIA deliver significant performance improvements, operating at speeds up to 14 times faster than their vintage counterparts. While the 65C02 maintains instruction set compatibility with documented 6502 operations, it includes additional instructions and does not support undocumented or illegal opcodes present in the original processor.
+
+Modern enhancements build upon this foundation through careful implementation of contemporary technologies. Extended I/O capabilities through I2C and SPI interfaces provide expansion options beyond traditional parallel interfaces. Where additional memory addressing is required, the 65816 processor option enables expanded addressing whilst maintaining base architecture functionality.
+
+The development approach emphasises modularity and consistency across the Aves platform family. System components maintain clear interfaces that support hardware expansion whilst preserving core functionality. The architecture ensures immediate system availability upon power-up, with a clear separation between core and extended functionality that enables customisation without compromising reliability.
+
+This balanced approach to system design enables Kingfisher to bridge vintage computing principles with contemporary capabilities. The result maintains the simplicity and directness that characterised early home computers whilst providing a robust foundation for a modern development style. Through careful attention to both historical principles and modern requirements, the system delivers an efficient and flexible platform for 8-bit computing.
+
+== Fundamental System Structures
+Kingfisher's architecture builds upon several core structures that work together to create a robust and extensible system. These structures provide the foundation for the language's key features: compile-time type checking, efficient word lookup, and runtime safety. Understanding these fundamental structures is essential for both using and extending the system effectively.
+
+=== Dictionary Entries
+The dictionary is the heart of Kingfisher's extensible architecture, storing all definitions, variables, and constants. Each dictionary entry forms part of a linked list, allowing for efficient lookup while maintaining the system's extensibility. To ensure type safety during compilation, each entry includes a type signature that encodes the stack signature using type modifiers, enabling robust compile-time type checking without runtime overhead.
+
+[NOTE]
+Dictionary entries can be aligned on machine word boundaries to ensure optimal access performance, for 16 bit CPU architectures.
+
+*Dictionary Entry Structure*
+[%header, cols="1,3"]
+|===
+|Field |Description
+
+|Type Signature
+|Variable array of type modifiers (0-6 bytes). Each modifier encodes input/output status and type information for stack signature checking.
+
+|Name
+|Variable length byte-counted string with maximum length of 20 bytes. Case-sensitive identifier used to reference the entry. The upper bits of the length byte are reserved:
+
+*Bit 7 ((Immediate)):* When set, the word executes immediately during compilation rather than being compiled into the definition. e.g. The word `Def` is marked Immediate so it can create new definitions while compiling.
+
+
+*Bit 6 ((CompileOnly)):* When set, the word can only be used during compilation. Attempting to execute these words directly will raise an error. e.g. Control flow words like `If`, `Else`, and `End` are marked CompileOnly since they only make sense during compilation. 
+
+|Link
+|Pointer to the previous dictionary entry, creating a linked list structure that enables lookup.
+
+|Code
+|Executable machine code. For STC, contains subroutine calls that can be optimised by replacing the final call with a jump. For DTC, contains the threaded code sequence.
+
+|Data
+|Pointer to associated data storage. Used by variables, constants, and words requiring static data. Null pointer (0) indicates no static data.
+
+|===
+
+=== Type System
+The type system provides compile-time type checking through distinct but complementary mechanisms. Type signatures provide human-readable representation of stack effects, while type modifiers encode this information for the compiler. The system defines fundamental types as building blocks and supports signature literals for type-aware dictionary operations.
+
+==== Base Types
+The system defines a set of fundamental types used throughout the language. These form the building blocks for all type operations.
+
+.Base Types
+[%header, cols="1,2,5"]
+|===
+|Value|Type|Description
+|00|Var|Default type for numeric values and primitive operation addresses
+|01|Byte|Unsigned 8-bit value for bit operations and characters
+|02|Word|16-bit unsigned integer value
+|03|Sword|16-bit signed integer value
+|04|Long|32-bit integer value
+|05|Flag|Boolean value
+|06|String|Character string reference
+|07|-|Reserved for future use
+|08-31|User defined types|Application-specific type definitions
+|===
+
+==== Type Signatures
+Type signatures provide a human-readable representation of stack effects for words. The signature notation follows the natural stack order, where parameters are read from right to left, matching the order of stack operations. Input parameters precede output parameters, separated by a colon.
+
+[%unbreakable]
+--
+.Type Signature Examples
+[source]
+----
+// A word consuming a Var then a Byte, yielding a Flag
+( Byte Var : Flag )     
+
+// A word yielding a String without input parameters
+( : String )            
+
+// A word consuming two Words, yielding a Word
+( Word Word : Word )
+----
+--
+
+==== Type Modifiers
+Type modifiers encode type information in a binary format for compiler use. Each modifier byte contains flags and type identifiers that fully specify parameter characteristics. The compiler utilises these modifiers during type checking and word compilation.
+
+.Type Modifier Format
+[%header, cols="^1,^1,^3"]
+|===
+|Bit Position|Name|Description
+|7|I/O|Input (0) or Output (1) parameter
+|6|Array|Single value (0) or Array type (1)
+|5|Slice|Full value (0) or Reference/view (1)
+|4-0|Base Type|Type identifier (0-31)
+|===
+
+[%unbreakable]
+--
+.Type Signatures and Modifiers Examples
+[source]
+----
+// Type Signature with:
+// Inputs: Byte Var     -> Consumed
+// Outputs: Flag        -> Produced
+( Byte Var : Flag )     // => 0x03 0x01 0x00 0x85 
+
+// Type Signature with:
+// Inputs: None
+// Outputs: String      -> Produced
+( : String )            // => 0x01 0x85
+
+// Type Signature with:
+// Inputs: Word Word    -> Consumed
+// Outputs: Word        -> Produced
+( Word Word : Word )   // => 0x03 0x02 0x02 0x82
+----
+--
+
+[NOTE]
+See <<dictionary-concepts>> for details about vocabularies and namespaces.
+
+=== The Dictionary
+The Dictionary is the core component of Kingfisher, managing all definitions, types, and variables. It provides fast name lookup and manages memory allocation. This core subsystem forms the foundation for Kingfisher's extensible nature.
+
+=== Dictionary Concepts
+The Dictionary implements an efficient symbol management system focused on compile-time type checking and name resolution. While it supports basic runtime operations, its primary role is enabling robust compile-time verification of type safety and symbol visibility. The system emphasises compile-time checks over runtime flexibility to ensure reliable and efficient execution.
+
+At its core, the Dictionary maintains entries for every symbol in a Kingfisher program. Each entry can represent a variable holding runtime data, a type definition that defines data structures, or a function or procedure. Dictionary entries also store constants with fixed values, and manage modules and namespaces that provide code organisation. These different kinds of entries share a common structure while serving distinct roles in the system.
+
+Multiple mechanisms are employed to manage these symbols throughout their lifecycle. Symbol resolution forms the cornerstone of the Dictionary's operation, providing the means to locate and access program elements across different scopes. Working in concert with the memory management subsystem, the Dictionary coordinates the allocation and deallocation of resources, ensuring efficient use of system memory while maintaining program safety.
+
+==== Symbol Resolution
+Symbol resolution in Kingfisher operates through a multi-stage process. When resolving a symbol, the Dictionary first traverses the scope hierarchy, beginning with the local scope and progressively moving outward toward the global scope until the symbol is found. This hierarchical search respects symbol visibility rules that determine which scopes can access particular symbols, enforcing encapsulation and overlaying inner scope names over outer scopes. During resolution, the Dictionary also validates type information, ensuring type compatibility and gathering necessary metadata about the symbol's structure and behaviour. The Dictionary entry's data field is set to point to this allocated storage, while the code field contains executable machine code - either subroutine calls that can be optimised by replacing the final call with a jump (for STC), or the threaded code sequence (for DTC).
+
+=== Dictionary Reference
+The dictionary forms the foundation of Kingfisher's extensible architecture, implementing word storage, type checking, and runtime safety.
+
+==== Dictionary Entry Structure
+Each dictionary entry contains five fields:
+
+.Dictionary Entry Fields
+[%header, cols="1,3"]
+|===
+|Field|Description
+|Type Signature|Variable length counted array of type modifiers (0-6 bytes) encoding stack effects
+|Name|Variable length counted string (max 20 bytes) with control bits:
+ * Bit 7 (Immediate): Executes during compilation
+ * Bit 6 (CompileOnly): Only valid during compilation
+|Link|Pointer to previous dictionary entry
+|Code|Executable machine code (STC or DTC format)
+|Data|Pointer to static data storage (0 if none)
+|===
+
+==== Type System Integration
+Dictionary entries use type signatures for compile-time checking:
+
+.Type Signature Format
+[source]
+----
+( input-types : output-types )
+
+Examples:
+( Byte Var : Flag )     // Consumes Byte,Var; produces Flag
+( : String )            // Produces String
+( Word Word : Word )    // Consumes two Words; produces Word
+----
+
+.Base Types
+[%header, cols="1,1,3"]
+|===
+|Value|Type|Description
+|00|Var|Default numeric type and primitive addresses
+|01|Byte|Unsigned 8-bit value
+|02|Word|16-bit unsigned integer
+|03|Sword|16-bit signed integer
+|04|Long|32-bit integer
+|05|Flag|Boolean value
+|06|String|Character string reference
+|07|-|Reserved
+|08-31|User|Application-specific types
+|===
+
+==== Type Modifiers
+Each modifier byte encodes parameter characteristics:
+
+.Type Modifier Format
+[%header, cols="^1,^1,^3"]
+|===
+|Bit|Name|Description
+|7|I/O|Input (0) or Output (1) parameter
+|6|Array|Single value (0) or Array type (1)
+|5|Slice|Full value (0) or Reference/view (1)
+|4-0|Base Type|Type identifier (0-31)
+|===
+
+=== Dictionary Management
+The Dictionary provides a comprehensive set of operations for managing symbols and their associated data throughout the system lifecycle. These operations handle everything from symbol creation and lookup to type checking and memory management. The Dictionary's management functions are designed to maintain system integrity while providing efficient access to program elements.
+
+=== Dictionary Structure
+The Dictionary follows the singleton pattern, ensuring exactly one instance exists throughout the system. This single instance is created during system initialisation and maintains the global symbol table. The dictionary is constructed at compile time with access to the Dictionary provided through static instance methods. This design ensures consistent symbol management and prevents multiple competing Dictionary instances from being created.
+
+=== Memory Management
+Kingfisher's memory management system provides two primary abstractions for working with memory through Blocks and Slices. These abstractions ensure safe and efficient memory handling whilst preventing common issues such as buffer overflows and memory leaks.
+
+==== Memory Blocks
+Memory blocks serve as the foundation of Kingfisher's memory management system through fixed-size memory allotments. Each block maintains internal size information and implements bounds-checked access to its contents. The system manages the freeing of blocks automatically and ensures proper memory alignment for efficient access.
+
+[NOTE]
+====
+Memory blocks are allotted and freed when scopes are opened and closed, simplifying the memory management strategy.
+====
+
+==== Memory Slices
+A slice creates a view into an existing memory block without copying the underlying data. When created, a slice establishes a reference to its source block along with position information comprising an offset and length. This approach allows the slice to define a specific region within the block.
+
+The slice mechanism ensures memory safety through comprehensive bounds checking and reference counting of the memory slices. This design enables efficient memory access through zero-copy operations whilst maintaining complete memory safety.
+
+[NOTE]
+====
+Memory Slices can only reference objects in the current scope, avoideing the need for complex memory management strategies
+====
+
+=== Compile-time Features
+Kingfisher implements comprehensive compile-time checking and validation to ensure program correctness before execution. The system performs thorough type analysis, manages definitions, and resolves symbols across different scopes whilst maintaining strict safety guarantees.
+
+==== Type Checking
+The compiler performs exhaustive type checking during compilation, by tracking stack signatures on a type stack and checking against the embedded type modifiers, ensuring type safety. When the compiler encounters a word usage, it compares the current stack state with the word's type signature to verify compatibility.
+
+Type checking encompasses validation of array and slice operations to ensure type safety. The type system verifies that operations maintain the correct types when working with arrays and slices at compile-time, while actual bounds checking occurs at runtime.
+
+[NOTE]
+====
+Runtime bounds checking provides an essential safety mechanism for array and slice operations. The type system ensures type safety while runtime checks prevent buffer overflows and invalid memory access.
+====
+
+==== Definition Management
+The Kingfisher compiler maintains a dictionary of word definitions during compilation. Each word in the dictionary includes its name, compilation behaviour, and visibility scope. This dictionary serves two primary purposes: it enables the compiler to locate word definitions when they are referenced, and it enforces the rules about how and when words may be used.
+
+Some words require special handling during compilation. Immediate words execute when encountered during compilation, making them useful for control structures and compile-time operations. Compile-only words can only appear within definitions and cannot be executed in the interpreter. The compiler enforces these restrictions by checking each word's attributes when it is used.
+
+[NOTE]
+====
+The dictionary system allows the compiler to detect undefined or misused words during compilation, preventing runtime errors that would occur if missing or incorrectly used words were discovered during execution.
+====
+
+==== Symbol Resolution
+Symbol resolution occurs during compilation through a multi-stage process that determines the correct interpretation of each identifier. The compiler searches through nested scopes to locate definitions, starting from the innermost scope and proceeding outward to the global scope. This process ensures that local definitions take precedence over global ones, whilst maintaining access to outer scope definitions when needed.
+
+[NOTE]
+====
+The resolution process maintains consistent naming within each scope whilst preserving the expected precedence rules of nested definitions.
+====
+
+==== Module System
+The module system organises code into separate compilation units called modules. Each module creates its own vocabulary of definitions that are public by default. When a module is included, its definitions are compiled but its vocabulary remains excluded from the active search chain.
+
+The Use command adds a module's vocabulary to the extended search chain. This mechanism allows definitions in the extended search chain to hide matching names in outer scopes.
+
+[NOTE]
+====
+The vocabulary system provides namespace isolation between modules while allowing controlled access through Use commands.
+====

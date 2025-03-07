@@ -1,0 +1,255 @@
+== Fundamental System Structures
+Kingfisher's architecture builds upon several core structures that work together to create a robust and extensible system. These structures provide the foundation for the language's key features: compile-time type checking, efficient word lookup, and runtime safety. Understanding these fundamental structures is essential for both using and extending the system effectively.
+
+=== Dictionary Entries
+The dictionary is the heart of Kingfisher's extensible architecture, storing all definitions, variables, and constants. Each dictionary entry forms part of a linked list, allowing for efficient lookup while maintaining the system's extensibility. To ensure type safety during compilation, each entry includes a type signature that encodes the stack signature using type modifiers, enabling robust compile-time type checking without runtime overhead.
+
+[NOTE]
+Dictionary entries can be aligned on machine word boundaries to ensure optimal access performance, for 16 bit CPU architectures.
+
+*Dictionary Entry Structure*
+[%header, cols="1,3"]
+|===
+|Field |Description
+
+|Type Signature
+|Variable array of type modifiers (0-6 bytes). Each modifier encodes input/output status and type information for stack signature checking.
+
+|Name
+|Variable length byte-counted string with maximum length of 20 bytes. Case-sensitive identifier used to reference the entry. The upper bits of the length byte are reserved:
+
+*Bit 7 ((Immediate)):* When set, the word executes immediately during compilation rather than being compiled into the definition. e.g. The word `Def` is marked Immediate so it can create new definitions while compiling.
+
+
+*Bit 6 ((CompileOnly)):* When set, the word can only be used during compilation. Attempting to execute these words directly will raise an error. e.g. Control flow words like `If`, `Else`, and `End` are marked CompileOnly since they only make sense during compilation. 
+
+|Link
+|Pointer to the previous dictionary entry, creating a linked list structure that enables lookup.
+
+|Code
+|Executable machine code. For STC, contains subroutine calls that can be optimised by replacing the final call with a jump. For DTC, contains the threaded code sequence.
+
+|Data
+|Pointer to associated data storage. Used by variables, constants, and words requiring static data. Null pointer (0) indicates no static data.
+
+|===
+
+=== Type System
+The type system provides compile-time type checking through distinct but complementary mechanisms. Type signatures provide human-readable representation of stack effects, while type modifiers encode this information for the compiler. The system defines fundamental types as building blocks and supports signature literals for type-aware dictionary operations.
+
+==== Base Types
+The system defines a set of fundamental types used throughout the language. These form the building blocks for all type operations.
+
+.Base Types
+[%header, cols="1,2,5"]
+|===
+|Value|Type|Description
+|00|Var|Default type for numeric values and primitive operation addresses
+|01|Byte|Unsigned 8-bit value for bit operations and characters
+|02|Word|16-bit unsigned integer value
+|03|Sword|16-bit signed integer value
+|04|Long|32-bit integer value
+|05|Flag|Boolean value
+|06|String|Character string reference
+|07|-|Reserved for future use
+|08-31|User defined types|Application-specific type definitions
+|===
+
+==== Type Signatures
+Type signatures provide a human-readable representation of stack effects for words. The signature notation follows the natural stack order, where parameters are read from right to left, matching the order of stack operations. Input parameters precede output parameters, separated by a colon.
+
+[%unbreakable]
+--
+.Type Signature Examples
+[source]
+----
+// A word consuming a Var then a Byte, yielding a Flag
+( Byte Var : Flag )     
+
+// A word yielding a String without input parameters
+( : String )            
+
+// A word consuming two Words, yielding a Word
+( Word Word : Word )
+----
+--
+
+==== Type Modifiers
+Type modifiers encode type information in a binary format for compiler use. Each modifier byte contains flags and type identifiers that fully specify parameter characteristics. The compiler utilises these modifiers during type checking and word compilation.
+
+.Type Modifier Format
+[%header, cols="^1,^1,^3"]
+|===
+|Bit Position|Name|Description
+|7|I/O|Input (0) or Output (1) parameter
+|6|Array|Single value (0) or Array type (1)
+|5|Slice|Full value (0) or Reference/view (1)
+|4-0|Base Type|Type identifier (0-31)
+|===
+
+[%unbreakable]
+--
+.Type Signatures and Modifiers Examples
+[source]
+----
+// Type Signature with:
+// Inputs: Byte Var     -> Consumed
+// Outputs: Flag        -> Produced
+( Byte Var : Flag )     // => 0x03 0x01 0x00 0x85 
+
+// Type Signature with:
+// Inputs: None
+// Outputs: String      -> Produced
+( : String )            // => 0x01 0x85
+
+// Type Signature with:
+// Inputs: Word Word    -> Consumed
+// Outputs: Word        -> Produced
+( Word Word : Word )   // => 0x03 0x02 0x02 0x82
+----
+--
+
+[NOTE]
+See <<dictionary-concepts>> for details about vocabularies and namespaces.
+
+=== The Dictionary
+The Dictionary is the core component of Kingfisher, managing all definitions, types, and variables. It provides fast name lookup and manages memory allocation. This core subsystem forms the foundation for Kingfisher's extensible nature.
+
+=== Dictionary Concepts
+The Dictionary implements an efficient symbol management system focused on compile-time type checking and name resolution. While it supports basic runtime operations, its primary role is enabling robust compile-time verification of type safety and symbol visibility. The system emphasises compile-time checks over runtime flexibility to ensure reliable and efficient execution.
+
+At its core, the Dictionary maintains entries for every symbol in a Kingfisher program. Each entry can represent a variable holding runtime data, a type definition that defines data structures, or a function or procedure. Dictionary entries also store constants with fixed values, and manage modules and namespaces that provide code organisation. These different kinds of entries share a common structure while serving distinct roles in the system.
+
+Multiple mechanisms are employed to manage these symbols throughout their lifecycle. Symbol resolution forms the cornerstone of the Dictionary's operation, providing the means to locate and access program elements across different scopes. Working in concert with the memory management subsystem, the Dictionary coordinates the allocation and deallocation of resources, ensuring efficient use of system memory while maintaining program safety.
+
+==== Symbol Resolution
+Symbol resolution in Kingfisher operates through a multi-stage process. When resolving a symbol, the Dictionary first traverses the scope hierarchy, beginning with the local scope and progressively moving outward toward the global scope until the symbol is found. This hierarchical search respects symbol visibility rules that determine which scopes can access particular symbols, enforcing encapsulation and overlaying inner scope names over outer scopes. During resolution, the Dictionary also validates type information, ensuring type compatibility and gathering necessary metadata about the symbol's structure and behavior. The Dictionary entry's data field is set to point to this allocated storage, while the code field contains executable machine code - either subroutine calls that can be optimised by replacing the final call with a jump (for STC), or the threaded code sequence (for DTC).
+
+=== Dictionary Reference
+The dictionary forms the foundation of Kingfisher's extensible architecture, implementing word storage, type checking, and runtime safety.
+
+==== Dictionary Entry Structure
+Each dictionary entry contains five fields:
+
+.Dictionary Entry Fields
+[%header, cols="1,3"]
+|===
+|Field|Description
+|Type Signature|Variable length counted array of type modifiers (0-6 bytes) encoding stack effects
+|Name|Variable length counted string (max 20 bytes) with control bits:
+ * Bit 7 (Immediate): Executes during compilation
+ * Bit 6 (CompileOnly): Only valid during compilation
+|Link|Pointer to previous dictionary entry
+|Code|Executable machine code (STC or DTC format)
+|Data|Pointer to static data storage (0 if none)
+|===
+
+==== Type System Integration
+Dictionary entries use type signatures for compile-time checking:
+
+.Type Signature Format
+[source]
+----
+( input-types : output-types )
+
+Examples:
+( Byte Var : Flag )     // Consumes Byte,Var; produces Flag
+( : String )            // Produces String
+( Word Word : Word )    // Consumes two Words; produces Word
+----
+
+.Base Types
+[%header, cols="1,1,3"]
+|===
+|Value|Type|Description
+|00|Var|Default numeric type and primitive addresses
+|01|Byte|Unsigned 8-bit value
+|02|Word|16-bit unsigned integer
+|03|Sword|16-bit signed integer
+|04|Long|32-bit integer
+|05|Flag|Boolean value
+|06|String|Character string reference
+|07|-|Reserved
+|08-31|User|Application-specific types
+|===
+
+==== Type Modifiers
+Each modifier byte encodes parameter characteristics:
+
+.Type Modifier Format
+[%header, cols="^1,^1,^3"]
+|===
+|Bit|Name|Description
+|7|I/O|Input (0) or Output (1) parameter
+|6|Array|Single value (0) or Array type (1)
+|5|Slice|Full value (0) or Reference/view (1)
+|4-0|Base Type|Type identifier (0-31)
+|===
+
+=== Dictionary Management
+The Dictionary provides a comprehensive set of operations for managing symbols and their associated data throughout the system lifecycle. These operations handle everything from symbol creation and lookup to type checking and memory management. The Dictionary's management functions are designed to maintain system integrity while providing efficient access to program elements.
+
+=== Dictionary Structure
+The Dictionary follows the singleton pattern, ensuring exactly one instance exists throughout the system. This single instance is created during system initialisation and maintains the global symbol table. The dictionary is constructed at compile time with access to the Dictionary provided through static instance methods. This design ensures consistent symbol management and prevents multiple competing Dictionary instances from being created.
+
+=== Memory Management
+Kingfisher's memory management system provides two primary abstractions for working with memory through Blocks and Slices. These abstractions ensure safe and efficient memory handling whilst preventing common issues such as buffer overflows and memory leaks.
+
+==== Memory Blocks
+Memory blocks serve as the foundation of Kingfisher's memory management system through fixed-size memory allotments. Each block maintains internal size information and implements bounds-checked access to its contents. The system manages the freeing of blocks automatically and ensures proper memory alignment for efficient access.
+
+[NOTE]
+====
+Memory blocks are allotted and freed when scopes are opened and closed, simplifying the memory management strategy.
+====
+
+==== Memory Slices
+A slice creates a view into an existing memory block without copying the underlying data. When created, a slice establishes a reference to its source block along with position information comprising an offset and length. This approach allows the slice to define a specific region within the block.
+
+The slice mechanism ensures memory safety through comprehensive bounds checking and reference counting of the memory slices. This design enables efficient memory access through zero-copy operations whilst maintaining complete memory safety.
+
+[NOTE]
+====
+Memory Slices can only reference objects in the current scope, avoideing the need for complex memory management strategies
+====
+
+=== Compile-time Features
+Kingfisher implements comprehensive compile-time checking and validation to ensure program correctness before execution. The system performs thorough type analysis, manages definitions, and resolves symbols across different scopes whilst maintaining strict safety guarantees.
+
+==== Type Checking
+The compiler performs exhaustive type checking during compilation, by tracking stack signatures on a type stack and checking against the embedded type modifiers, ensuring type safety. When the compiler encounters a word usage, it compares the current stack state with the word's type signature to verify compatibility.
+
+Type checking encompasses validation of array and slice operations to ensure type safety. The type system verifies that operations maintain the correct types when working with arrays and slices at compile-time, while actual bounds checking occurs at runtime.
+
+[NOTE]
+====
+Runtime bounds checking provides an essential safety mechanism for array and slice operations. The type system ensures type safety while runtime checks prevent buffer overflows and invalid memory access.
+====
+
+==== Definition Management
+The Kingfisher compiler maintains a dictionary of word definitions during compilation. Each word in the dictionary includes its name, compilation behaviour, and visibility scope. This dictionary serves two primary purposes: it enables the compiler to locate word definitions when they are referenced, and it enforces the rules about how and when words may be used.
+
+Some words require special handling during compilation. Immediate words execute when encountered during compilation, making them useful for control structures and compile-time operations. Compile-only words can only appear within definitions and cannot be executed in the interpreter. The compiler enforces these restrictions by checking each word's attributes when it is used.
+
+[NOTE]
+====
+The dictionary system allows the compiler to detect undefined or misused words during compilation, preventing runtime errors that would occur if missing or incorrectly used words were discovered during execution.
+====
+
+==== Symbol Resolution
+Symbol resolution occurs during compilation through a multi-stage process that determines the correct interpretation of each identifier. The compiler searches through nested scopes to locate definitions, starting from the innermost scope and proceeding outward to the global scope. This process ensures that local definitions take precedence over global ones, whilst maintaining access to outer scope definitions when needed.
+
+[NOTE]
+====
+The resolution process maintains consistent naming within each scope whilst preserving the expected precedence rules of nested definitions.
+====
+
+==== Module System
+The module system organises code into separate compilation units called modules. Each module creates its own vocabulary of definitions that are public by default. When a module is included, its definitions are compiled but its vocabulary remains excluded from the active search chain.
+
+The Use command adds a module's vocabulary to the extended search chain. This mechanism allows definitions in the extended search chain to hide matching names in outer scopes.
+
+[NOTE]
+====
+The vocabulary system provides namespace isolation between modules while allowing controlled access through Use commands.
+====

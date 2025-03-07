@@ -1,0 +1,644 @@
+<==
+== Technical Background
+This section provides comprehensive documentation for the Kingfisher development environment. This guide details the core components, methods and patterns that enable effective software development within the Aves platform ecosystem. Kingfisher implements its own stack-based programming language, providing a fresh approach to 8-bit system development.
+
+The technical architecture reflects this heritage whilst incorporating considered enhancements. At its core, Kingfisher maintains compatibility with classic hardware paradigms, particularly the Commodore approach to device management and memory organisation. This design philosophy enables the system to support both vintage hardware and retro 8-bit Aves platforms through a unified interface. The also will be expanded to include a range of 16 bit models as well.
+
+The system architecture implements established conventions from the 8-bit era, such as device numbering and memory mapping, whilst updating the architecture with expanded I/O capabilities and enhanced memory management. This balance of traditional and enhanced features creates a robust foundation for classic stack-based software development.
+
+Through its modular design, Kingfisher accommodates various hardware configurations across the Aves family of systems. The architecture provides consistent interfaces for peripheral access, memory management, and system resources, allowing developers to create portable applications that function across multiple platforms within the Aves ecosystem.
+==>
+=== System Architecture
+The Kingfisher system architecture builds upon established 8-bit computing principles, emphasising simplicity and efficient resource utilisation. Early home computers established fundamental patterns through ROM-based firmware and embedded language systems, an approach that proved both reliable and effective. Kingfisher extends these principles whilst maintaining compatibility with vintage software and hardware designs.
+
+==== Operating System Design
+Early home computer manufacturers provided ROM-based firmware and embedded BASIC interpreters rather than complex operating systems. This approach delivered immediate system availability and efficient operation within 8-bit hardware constraints. Commodore developed this concept further by implementing external disk operating systems, preserving valuable system memory by offloading storage operations to dedicated controllers.
+
+The Kingfisher operating system maintains a similar pattern whilst extending system capabilities. Core functionality resides in ROM, providing reliable operation and immediate availability upon system startup. The ROM contains the kernel, compiler, interpreter, editor and command line interface. Direct hardware access occurs through memory-mapped I/O, following established patterns for device interaction. Additional features load from external storage when required, enabling system customisation without compromising core functionality.
+
+The modular design supports hardware expansion through multiple serial protocols, enabling the use of a wide variety of different hardware configurations. This approach maintains the simplicity and reliability inherent in ROM-based systems.
+
+==== Hardware Implementation
+The Aves hardware platform implements core system functionality through carefully selected enhancements to vintage designs. Custom video and audio subsystems maintain software compatibility whilst providing expanded capabilities. CMOS variants of classic processors deliver improved efficiency whilst preserving instruction set compatibility. the following <<Processor Options>> Table show the processors provided by Aves and supported by Kingfisher
+
+.Processor Options
+[%header, cols="2,4"]
+|===
+|Processor|Implementation
+
+|6502
+|Standard MOS instruction set
+
+|65C02
+|Enhanced CMOS instruction set
+
+|65816
+|Extended 16-bit instruction set
+
+|===
+
+==== Input/Output System
+Device management implements the Commodore convention for peripheral addressing, ensuring straightforward integration with existing software. The system supports both traditional peripherals and enhanced expansion options through a consistent device numbering scheme.
+
+.Device Assignments
+[%header, cols="^1,4"]
+|===
+|Device|Function
+
+|0|Keyboard input
+|1|Cassette interface
+|2|RS232 and I2C UART functions
+|3|Display output
+|4-5|Printer operations
+|6|I2C expansion interface
+|7|SPI expansion interface
+|8-15|Disk operations
+
+|===
+
+==== Memory
+The Kingfisher system implements a flexible memory architecture that builds upon established 8-bit computing principles. This organisation provides efficient usage of ROM and RAM, and provides sufficient capacity for both ROM and RAM based applications.
+
+Memory management divides the 64K address space into distinct functional regions. System RAM occupies the lower 32K, providing workspace for applications and system variables. The zero page and stack occupy the first 512 bytes of RAM, following traditional 6502 architecture conventions for optimal performance.
+
+The upper memory regions contain system firmware, I/O device registers and boot code. This arrangement ensures critical system functions remain accessible regardless of RAM banking or paging operations. The firmware region houses the Kingfisher implementation alongside essential system routines, whilst dedicated I/O space provides consistent peripheral access.
+
+The memory architecture does not use banking, instead serial memory is used for file storage, while other models use the 65816's segmented 24 bit address capability to address more than 64K RAM, however the base memory in segment 0 remains consistent.
+
+.Memory Capacity
+[%header, cols="2,2,3"]
+|===
+|Memory Space|Sizes|Usage
+
+|System ROM
+|32K EPROM +
+128K FLASH
+|Firmware and system routines
+
+|Main RAM
+|32K +
+128K +
+512K
+|Application workspace
+
+|Extended Storage
+|128K +
+256K
+|I2C EEPROM (optional)
+
+|Expansion
+|SD-CARD etc.
+|I2C/SPI interfaces
+|===
+
+[NOTE]
+Extended storage availability depends upon hardware configuration and platform implementation.
+
+.Base System Memory Map
+[%header, cols="2,2,3"]
+|===
+|From|To|Usage
+
+|0x0000
+|0x7FFF
+|RAM - System RAM
+
+|0x8000
+|0xF7FF
+|EPROM - Firmware, Kingfisher, Talon, Kernel
+
+|0xF800
+|0xFBFF
+|I/O
+
+|0xFC00
+|0xFFFF
+|EPROM - Memory test and boot
+|===
+
+[NOTE]
+Zero page occupies 0x0000-0x00FF, with system stack at 0x0100-0x01FF.
+
+[%unbreakable]
+--
+.Memory Map Example
+[source]
+----
+0x8000 Constant ROM-BASE    // Start of system ROM
+0x0000 Constant RAM-BASE    // Start of system RAM
+0x7FFF Constant RAM-TOP     // Top of standard RAM
+----
+--
+
+==== Vintage Operating Systems
+The first generation of home computers did not have operating systems like modern day operating systems. Instead manufacturers provided ROM based firmware and an embedded language, usually BASIC. The likes of Commodore, Apple, Atari and Acorn adopted this approach to great effect and also published software on ROM based expansion cartridges. In fact many of these systems did not have Disk drives and relied on tape drives to save programs and data.
+
+Commodore pioneered the idea of off loading the work of running the Disk Operating System (DOS) onto a separate device but did not provide any form of filesystem abstractions in most of the BASIC Interpreters due to memory limitations. 
+
+=== Development References
+The Development Reference section provides comprehensive documentation for the Kingfisher development environment. This guide details the core components, methods and patterns that enable effective software development within the Aves platform ecosystem, with particular focus on Kingfisher's unique stack-based programming environment.
+
+==== Kingfisher Lexicon
+A categorised index of all of Kingfishers bespoke words can be found in the <<Kingfisher Words by Category>> section below.
+
+.Kingfisher Words by Category
+[%header, cols="2,3"]
+|===
+
+|Reference|Category
+|<<Stack Words>>
+.5+|Stack manipulation words
+|<<Arithmetic Words>>
+|<<Bitwise Words>>
+|<<General Words>>
+|<<Type Conversion Words>>
+
+|<<Variable Constructors>>
+.2+|Variables
+|<<Variable Methods>>
+
+|<<Array Constructors>>
+.6+|Collections
+|<<Array Methods>>
+|<<Typed Array Methods>>
+|<<StrArray Constructors>>
+|<<StrArray Methods>>
+|<<Collection Iteration Words>>
+
+|<<Bootstrap Words>>
+.5+|Bootstrap, Scope and Vocabulary
+|<<Chain methods>>
+|<<Vocabulary Constructor>>
+|<<Module Words>>
+|<<Alias Word>>
+
+|<<Type Definition Words>>
+.6+|Type definition
+|<<Scalar Vocabulary Words>>
+|<<ShortSeq Vocabulary Words>>
+|<<Sequence Vocabulary Words>>
+|<<Type Field Words>>
+|<<Dataset Methods>>
+
+|<<Boolean Words>>
+.2+|Boolean and conditional operators
+|<<Conditional Words>>
+
+|<<If Branch Operations>>
+.2+|Branches
+|<<Case Branch Operations>>
+
+|<<While Loop Words>>
+.2+|Loops
+|<<For Loop Words>>
+
+|<<Error Handling Words>>
+.5+|System
+|<<Error Methods>>
+|<<Fundamental System Words>> 
+|<<Dictionary Words>>
+|<<Heap Management Words>>
+
+|<<Label Word>>
+.6+|Assembly
+|<<Data Definition Directives>>
+|<<Section control>>
+|<<Assembly Language Words>>
+|<<System Data Constructors>>
+|<<System Data Methods>>
+
+|<<Stream Constructors>>
+.2+|Stream IO
+|<<Stream IO Methods>>
+
+|<<File System Methods>>
+.3+|File IO
+|<<Volume Methods>>
+|<<File Methods>>
+
+|===
+
+=== Perch CLI Reference
+The Perch Command Line Interface provides interactive access to the Kingfisher development environment through a REPL (Read-Eval-Print Loop). It combines traditional command line functionality with enhanced features for command editing and history navigation, whilst maintaining compatibility with vintage keyboard layouts.
+
+The interface preserves commands in a 256-byte buffer, allowing developers to recall and modify previous entries. Command editing capabilities include cursor movement, character insertion and deletion, and line manipulation functions.
+
+.Command Line Features
+[%header, cols="2,3"]
+|===
+|Feature|Description
+
+|History Buffer
+|256-byte circular buffer for command storage
+
+|Line Editing
+|Full cursor movement and text manipulation
+
+|Command Recall
+|Forward and backward history navigation
+
+|Character Support
+|Mapped special characters for vintage keyboards
+
+|===
+
+.Control Key Mappings
+[%header, cols="2,1,3"]
+|===
+|Command|Contol Key|Function
+
+|Backspace
+|^H
+|Delete the character to the left of the cursor and move left one space
+
+|Break
+|^C
+|Stop the running program (can be overridden)
+
+|CrsrDown
+|^S
+|Move cursor down one space
+
+|CrsrEnd
+|^E
+|Move cursor to end of line
+
+|CrsrHome
+|^Q
+|Move cursor to beginning of line
+
+|CrsrLeft
+|^A
+|Move cursor left one space
+
+|CrsrRight
+|^D
+|Move cursor right one space
+
+|CrsrUp
+|^W
+|Move cursor up one space
+
+|DelChar
+|DEL
+|Deletes the character under the cursor
+
+|DelLine
+|^L
+|Clear the entire line
+
+|InsMode
+|INST
+|Toggles insert mode (default is on)
+
+|===
+
+[%unbreakable]
+--
+.Usage Example
+[source]
+----
+> 10 Constant Test ok    // Define constant then prompt ok
+> Test Print 10 ok       // Print the test value
+> // Recall previous command with :^W
+Test Print
+----
+--
+
+=== Talon IDE Reference
+The Talon IDE provides a full-screen text editor optimized for the Kingfisher development environment. It combines efficient screen usage with flexible editing capabilities while respecting the constraints of vintage hardware. The editor supports both vertical and horizontal scrolling, with configurable margins to maximize usable screen space on displays ranging from 30 to 100 columns wide.
+
+The interface balances functionality with simplicity through a two-line menu system. The top menu line presents command categories, while the second line provides contextual descriptions of available operations. All editor functions are accessible through both menu selection and direct control key commands, accommodating different user preferences and keyboard layouts.
+
+Text manipulation features include both character-level horizontal selection and line-level vertical selection, enabling precise editing control. The display automatically manages available space between the edit area, debug panel, and menu overlay to maintain optimal visibility of the working text. Vertical scrolling operates line by line, while horizontal scrolling moves by screen width with configurable margins up to 100 character line lengths.
+
+The following tables provide comprehensive references for editor commands and display specifications across the range of supported hardware configurations.
+
+While Commodore machines traditionally use PETSCII encoding, Kingfisher implements standard ASCII character encoding. This provides better compatibility across the Aves platform family whilst maintaining consistent text representation. On the Commodore 64 and Aves machines, CodePage 437 is also available, offering extended character support. The PETSCII graphics character set is not currently supported.
+
+It should be noted that on Commodore hardware, the uppercase and lowercase character sets are transposed compared to standard ASCII - uppercase characters occupy the codes normally used for lowercase and vice versa. Kingfisher handles this transparently, ensuring consistent text display across all supported platforms.
+
+.Editor Commands
+[%header, cols="1,1,1,3"]
+|===
+|Command|Menu Item|Ctrl Key|Description
+
+|Backspace
+|--
+|^H
+|Deletes the character to the left of the cursor, and moves the cursor left one space
+
+|CrsrDown
+|--
+|^S
+|Move cursor down one space. Also cursor down key
+
+|CrsrEnd
+|--
+|^E
+|On first press move cursor to end of line, on second press go to bottom right of display
+
+|CrsrHome
+|--
+|^Q
+|on first press move cursor to beginning of line, on second press go to top left of display. Or go directly to the top left by pressing the home key
+
+|CrsrLeft
+|--
+|^A
+|Move cursor left one space. Also cursor left key
+
+|CrsrRight
+|--
+|^D
+|Move cursor right one space. Also cursor right key
+
+|CrsrUp
+|--
+|^W
+|Move cursor up one space. Also cursor up key
+
+|DelLine
+|--
+|^L
+|Clear the entire line. Press again clears the screen. Or clear the entire screen with the clr key
+
+|DelChar
+|--
+|INST/DEL
+|Deletes the character under the cursor
+
+|EditBegin
+|edit-begin +
+Menu-E-B
+|^B
+|Marks the beginning of an area of text
+
+|EditCopy
+|edit-copy +
+Menu-E-C
+|^C
+|Copy the marked text into a temporary buffer
+
+|EditE£xtract
+|edit-extract+ 
+Menu-E-X
+|^X
+|Extract the marked text into a temporary buffer
+
+|EditEnd
+|edit-end +
+Menu-E-N
+|^N
+|Marks the end of a text area
+
+|EditPaste
+|edit-paste +
+Menu-E-V
+|^V
+|Paste the text from the temporary buffer into the editor
+
+|FileNew
+|file-new +
+Menu-F-N
+|--
+|Create an empty file and clear all edit buffers
+
+|FileInsert
+|file-insert +
+Menu-F-I
+|--
+|Insert an existing file into memory starting at the line before the current line
+
+|FileOpen
+|file-open +
+Menu-F-O
+|--
+|Load an existing file int0 memory replacing existing contents
+
+|FileSave
+|file-save +
+Menu-F-S
+|--
+|Backup the existing file to a new name and save the current file
+
+|FileClose
+|file-close +
+Menu-F-C 
+|--
+|Close the file and clear memory
+
+|FileExit
+|file-exit +
+Menu-F-X
+|--
+|Checks if all changes have been saved and exits the editor
+
+|SearchFind
+|search-find +
+Menu-S-F
+|^F
+|Search file from current position until a match is found
+
+|SearchGoto
+|search-goto +
+Menu-S-G
+|^G
+|Goto a specific line number
+
+|SearchNext
+|search-next +
+Menu-S-N
+|^N
+|Moves to the next matching pattern
+
+|SearchOptCase
+|search-opt-case +
+Menu-S-O-C
+|^O
+|Toggle case sensitivity option
+
+|SearchOptGlobal
+|search-opt-global +
+Menu-S-O-G
+|^O
+|Toggle global replace option
+
+|SearchOptWord
+|search-opt-word +
+Menu-S-O-W
+|^O
+|Toggle match complete word only option
+
+|SearchReplace
+|search-replace +
+Menu-S-R
+|^R
+|Replace matched patterns with replacement text
+
+|ViewDebug
+|view-debug +
+Menu-V-D
+|--
+|Switch to Debug View
+
+|ViewEdit
+|view-edit +
+Menu-V-E
+|--
+|Switch to Editor View
+
+|ViewSplit
+|view-split +
+Menu-V-S
+|--
+|Switch to Split View, which shows a view of the editor in the upper part of the screen and the REPL in the lower part
+
+|ViewSwitch
+|view-toggle +
+Menu-V-T
+|^T
+|Toggle which view; Debug or Edit 
+
+|OptionsConfig
+|option-config +
+Menu-O-C
+|--
+|Configure options 
+|===
+
+.Display Specifications
+[%header, cols="1,1,1,1"]
+|===
+|Model|Width|Height|Colours
+
+|Commodore PET
+|40
+|25
+|Mono
+
+|Commodore CBM-80XX
+|80
+|25
+|Mono
+
+|Commodore VIC-20
+|30
+|30
+|8 Colours
+
+|Commodore C64
+|40
+|25
+|16 Colours
+
+|Aves Sparrow
+|50
+|30
+|16 Colours
+
+|Aves Dunnock
+|100
+|30
+|Mono
+
+|Aves Robin
+|22-30
+|23-30
+|8 Colours
+
+|Aves Blackbird
+|40
+|25
+|16 Colours
+
+|Aves Starling
+|40
+|25
+|16 Colours
+
+
+|===
+
+.Keyboard Mapping
+[%header, cols="2,1,1,1,1,1,1"]
+|===
+|Model|Menu|TAB|Control|Delete|Backspace|Insert 
+
+|PET
+.2+|<-
+|--
+.2+|Off/RVS
+|--
+.4+|INST/DEL
+.2+|SHIFT {plus} +
+INST/DEL
+
+|CBM 80XX
+|Tab 
+|Run/Stop
+
+|VIC-20
+.2+|<-
+.2+|Ctrl
+.2+|C=
+.2+|F1
+.2+|F3
+
+|C-C64
+
+|Aves Sparrow
+.5+|Esc
+.5+|Tab
+.5+|Control
+.5+|Del
+.5+|Backspace
+.5+|Ins
+
+
+|Aves Dunnock
+
+|Aves Robin
+
+|Aves Blackbird
+
+|Aves Starling
+
+|===
+
+.Configuration options
+[%header, cols="2,2,3"]
+|===
+
+|Option|Value|Description
+
+|Margin size
+|0-20
+|Horizontal scrolling margin (default=15, disable=0)
+
+|Editor window
+|(screen-height-4)-5
+|The line where the editor/debug windows split 
+
+|===
+
+=== Historical Context
+The story of Kingfisher begins with Commodore's revolutionary approach to personal computing in the late 1970s. Commodore's acquisition of MOS Technology and their vision of creating "computers for the masses, not the classes" established fundamental patterns that would influence home computing for decades. The PET 2001-8N, with its integrated design and innovative use of the 6502 CPU, set standards for efficient, cost-effective computing that remain relevant today.
+
+Project Aves emerged from a desire to preserve and enhance these proven design principles while embracing modern capabilities. Where Commodore pioneered intelligent peripherals and efficient memory usage, Aves reimagines these concepts using contemporary CMOS components. This approach maintains compatibility with classic architectures while delivering improved efficiency and expanded capabilities.
+
+==== Origins and Inspiration
+The original PET 2001-8N's integrated design demonstrated how thoughtful hardware architecture could maximize limited resources. Aves builds upon this foundation, replacing original components with modern CMOS equivalents while preserving the elegant simplicity of Commodore's approach. This careful balance of vintage compatibility and modern enhancement enables Kingfisher to bridge past and present computing paradigms.
+
+==== Technical Evolution
+While Aves began as a hardware-focused initiative to recreate Commodore's 8-bit systems, it quickly became apparent that software development would play a crucial role. Modern components like SD-Cards and serial memories demanded new interfaces, while preserving compatibility with classic software required careful adaptation of the original architecture. The built-in Basic interpreter not only lacked support for storage, it also lacked support for the customer silicon, was not easily extended and was very slow. The built in editor was better than most of Commodore's competitors but it was still very limited. This dual focus on hardware and software development has shaped Kingfisher's evolution.
+==== Design Philosophy
+The design philosophy for Kingfisher emphasises efficiency and purposeful enhancement of proven 8-bit computing principles. The system implements a minimal ROM-based architecture that provides essential system functions while maintaining direct hardware access through memory-mapped I/O. This approach follows established 6502 conventions for memory organization, particularly in its use of zero-page and stack addressing.
+
+The hardware platform builds upon classic 8-bit architectures through considered enhancement. Modern CMOS components like the 65C02 CPU and 65C22 VIA deliver significant performance improvements, operating at speeds up to 14 times faster than their vintage counterparts. While the 65C02 maintains instruction set compatibility with documented 6502 operations, it includes additional instructions and does not support undocumented or illegal opcodes present in the original processor.
+
+Modern enhancements build upon this foundation through careful implementation of contemporary technologies. Extended I/O capabilities through I2C and SPI interfaces provide expansion options beyond traditional parallel interfaces. Where additional memory addressing is required, the 65816 processor option enables expanded addressing whilst maintaining base architecture functionality.
+
+The development approach emphasises modularity and consistency across the Aves platform family. System components maintain clear interfaces that support hardware expansion whilst preserving core functionality. The architecture ensures immediate system availability upon power-up, with a clear separation between core and extended functionality that enables customisation without compromising reliability.
+
+This balanced approach to system design enables Kingfisher to bridge vintage computing principles with contemporary capabilities. The result maintains the simplicity and directness that characterised early home computers whilst providing a robust foundation for a modern development style. Through careful attention to both historical principles and modern requirements, the system delivers an efficient and flexible platform for 8-bit computing.

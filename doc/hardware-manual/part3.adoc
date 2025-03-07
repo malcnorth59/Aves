@@ -1,0 +1,244 @@
+== CRTC VMAC
+* Clock8    = 8MHz clock from divider
+* Phi2      = 4MHz CPU clock is 4MHz from divider
+* Chck      = 2MHz Chracter clock
+* Ldchb     = Pulse to load character into character latch
+* Ldsrb     = Pulse to load shift register on next clock rising edge
+* ldcolb    = Loads colour latch
+
+[unbreakable]
+--
+.Control Signal Timing
+[source]
+----
+011001100110011001  ← Clock8
+011110000111100001  ← Phi2
+011111111000000001  ← chck
+
+011111111111111001  ← ldcolb
+111111100111111111  ← ldchb
+
+           ___     ___     ___     ___
+Clock8    |   |___|   |___|   |___|   |___|
+           _______         _______
+Phi2      |       |_______|       |_______|
+           _______________                        
+CHCK      |               |_______________|
+           ___________________________
+LDCOLB                                |___|
+           ___________     ________________
+LDCHB                 |___|                          
+----
+--
+
+[unbreakable]
+--
+.sh/ld Timing
+[source]
+----
+00000000111111110   ← char clock
+10000000011111111   ← sh/ld
+            0_  1_  2_  3_  4_  5_  6_  7_  0_
+Char Clock  | |_| |_| |_| |_| |_| |_| |_| |_|_|   
+            __________________________     ____
+SH/LD                                 |___|
+                                        ↑
+                                    Load occurs
+                                   (rising edge captures data
+                                    while SH/LD still low)
+----
+--
+[unbreakable]
+--
+.sh/ld Generation
+[source]
+----
+  A______________      ___
+    |   ___      |____|   |
+    |__|   |          | + |____B
+    |  | + |__________|   |
+    |__|   |          |___|
+       |___|
+
+A = Character Clock (2MHz)
+B = Shift Load pulse
+----
+--
+
+Red Bit ----[510]----+
+                     |
+                    [1k]
+                     |
+Red I Bit ---[510]--+
+                     |
+                    [1k]
+                     |
+                     +--------+
+                              |
+Green Bit ---[510]--+         |
+                     |        |
+                  [1k]        |
+                     |        |   
+Green I Bit -[510]--+         |  
+                     |        | Ladders terminate here   
+                    [1k]      |    |
+                     |        |    v
+                     +--------+----+----[75]---->
+                              |    |
+Blue Bit ----[510]--+         |  [150]
+                     |        |    |
+                    [1k]      |   GND
+                     |        |
+Blue I Bit --[510]--+         |
+                     |        |
+                    [1k]      |
+                     |        |
+                     +--------+
+
+--
+.WinCUPL Equations
+[unbreakable]
+----
+/* low going pulse to load character into Latch on rising edge */
+ldchb = !(!clk8 & !phi2 & chck)       
+
+/* low pulse loads first colour latch */
+ldcol1b = !(!clk8 & !phi2 & !chck)
+
+/* low pulse loads first colour latch */
+ldcol2b = !(!clk8 & !phi2 &  chck)
+----
+--
+
+== Aves Video Controller Timing Analysis
+=== Display Modes
+* 40 Column Mode (320x300)
+** 16MHz dotclock
+** 2MHz character clock
+** 1K character + 1K colour memory
+
+* 80 Column Mode (640x300)
+** 32MHz dotclock
+** 2MHz character clock
+** 2K character + 2K colour memory
+
+=== Clock Selection
+* External hardware jumper selects dotclock frequency
+** 16MHz for 40 column mode
+** 32MHz for 80 column mode
+* Feeds directly to GAL dotclock input (pin 8)
+* Character clock remains constant at 2MHz
+
+=== Internal GAL Timing
+Dotclock is used for:
+
+* Cursor inversion logic
+* Latch enable pulse generation
+* Shift register load timing
+
+==== Timing Analysis
+* 10nS GAL propagation delay is acceptable because:
+** Latch enables occur during stable periods
+** Cursor inversion happens while data is stable
+** Not in critical path for pixel timing
+** All signals synchronized to system clocks
+
+=== Monitor Output
+* SVGA compatible timing
+* Horizontal: 40/80 characters (320/640 pixels)
+* Vertical: 25 characters (300 pixels)
+* Character cell: 8 x 12 pixels
+
+=== Timing Relationships
+
+The shift/load timing is controlled by the dot clock:
+
+----
+00000000111111110   ← dot clock
+10000000011111111   ← sh/ld
+            
+Dot Clock   ‾‾‾‾‾‾‾‾‾|_________|‾‾‾‾‾‾‾‾
+                     ↓         ↑           
+SH/LD       ‾‾‾‾‾‾‾‾‾‾‾|__________|‾‾‾‾‾
+                               ↑
+                          Load occurs
+----
+
+The character and colour loading signals (ldchb and ldcolb) are generated from Clock8, Phi2 and Chck:
+
+[source]
+----
+ldchb = !(!clk8 & !phi2 & chck)       
+ldcolb = !(!clk8 & !phi2 & !chck)
+----
+
+These signals coordinate the loading of character and colour data during the sh/ld pulse window shown above.
+
+== Video Controller Timing Analysis
+=== Display Modes
+* 40 Column Mode (320x300)
+** 16MHz dotclock
+** 2MHz character clock
+** 1K character + 1K colour memory
+
+* 80 Column Mode (640x300)
+** 32MHz dotclock
+** 2MHz character clock
+** 2K character + 2K colour memory
+
+=== Clock Selection
+* External hardware jumper selects dotclock frequency
+** 16MHz for 40 column mode
+** 32MHz for 80 column mode
+* Feeds directly to GAL dotclock input (pin 8)
+* Character clock remains constant at 2MHz
+
+=== Internal GAL Timing
+Dotclock is used for:
+
+* Cursor inversion logic
+* Latch enable pulse generation
+* Shift register load timing
+
+==== Timing Analysis
+* 10nS GAL propagation delay is acceptable because:
+** Latch enables occur during stable periods
+** Cursor inversion happens while data is stable
+** Not in critical path for pixel timing
+** All signals synchronized to system clocks
+
+=== Monitor Output
+* SVGA compatible timing
+* Horizontal: 40/80 characters (320/640 pixels)
+* Vertical: 25 characters (300 pixels)
+* Character cell: 8 x 12 pixels
+
+=== Timing Relationships
+
+[unbreakable]
+--
+.Shift/Load Timing
+[source]
+----
+00000000111111110   ← dot clock
+10000000011111111   ← sh/ld
+            
+Dot Clock   ‾‾‾‾‾‾‾‾‾|_________|‾‾‾‾‾‾‾‾
+                     ↓         ↑           
+SH/LD       ‾‾‾‾‾‾‾‾‾‾‾|__________|‾‾‾‾‾
+                               ↑
+                          Load occurs
+----
+--
+
+The character and colour loading signals (ldchb and ldcolb) are generated from Clock8, Phi2 and Chck:
+
+[source]
+----
+ldchb = !(!clk8 & !phi2 & chck)       
+ldcolb = !(!clk8 & !phi2 & !chck)
+----
+
+These signals coordinate the loading of character and colour data during the sh/ld pulse window shown above.
+
+

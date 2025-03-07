@@ -1,0 +1,81 @@
+= The Kingfisher Programming Language
+Malcolm North, December 2024
+:doctype: book
+:toc:
+
+== Foreword
+[Introduction to KPL, its origins and influences]
+
+== Abstract
+[Core concepts and design principles]
+
+= Part I: Language Fundamentals
+== Introduction to Kingfisher
+== Basic Concepts
+== Types and Variables
+== Control Structures
+== Functions and Procedures
+
+= Part II: Advanced Features
+== Object Oriented Programming
+== Memory Management
+== Collections and Data Structures
+== Modules and Libraries
+== Error Handling
+
+= Part III: System Architecture
+== Stack-Based Operations
+== Memory Model
+== Type System
+== Compiler Architecture
+== Runtime Environment
+
+= Part IV: Input/Output Systems
+== I/O Fundamentals
+== Device Interfaces
+== File Operations
+== Network Operations
+== System Calls
+
+= Part V: Development Tools
+== Development Environment
+== Debugging Tools
+== Testing Framework
+== Build System
+== Documentation Tools
+
+= Part VI: Reference Sections
+== Structure
+=== System References
+* Error Messages and Codes
+* Configuration Parameters
+* System Constants
+
+=== Historical and Technical Background
+* Vintage Operating Systems
+* Hardware Specifications
+* I/O Protocols
+
+=== Development References
+* API Documentation
+* Device Interfaces
+* Memory Maps
+
+== Error Messages Reference
+...Error message details and explanations
+
+== Vintage Operating Systems
+=== Overview
+...Historical context of early systems
+
+=== Early Approaches
+...Early OS implementations
+
+=== Nest Operating System
+==== Target Platforms
+==== System Architecture
+==== Key Features
+==== Development Philosophy
+
+[index]
+= Index

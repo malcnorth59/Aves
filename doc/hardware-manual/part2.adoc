@@ -1,0 +1,141 @@
+= CPU and Memory Systems
+:experimental:
+
+== Processor Architecture
+=== Primary CPU Options
+=== Processor Options
+Aves offers a choice of 8 and 16-bit CPUs within a common architecture. The platform's I/O operations are handled by an 8-bit CPU to maximise Kernel code reuse and simplify multi-architecture support. All CPUs are CMOS variants for reduced power consumption.
+
+The 6502's minimal register set and zero-page usage as pseudo registers provides excellent interrupt latency. When paired with support chips like the 6522 Versatile Interface Adapter (VIA), this makes it an ideal choice for I/O handling.
+
+In dual processor configurations, a R65C02 running at 4MHz serves as the I/O co-processor, working alongside primary CPUs such as the V25/V35, Z16C00, or MC68HC000. Communication between processors occurs through dual port memory, creating a loosely coupled architecture that simplifies inter-CPU communication and allows each processor to run at its optimal clock speed.
+
+.Supported CPU Types
+[%header, cols="2,3"]
+|===
+|CPU|Description
+
+|R65C02
+|The Rockwell R65C02 is no longer in production, but is widely available as new old stock. It is used in several Aves models and  is always clocked at 4MHz. The R65C02 is pin compatible with the original MOS 6502, which was fabricated in NMOS. One of many advantages the 65C02 has over its NMOS sibling is an enhanced instruction set
+
+|W65C02
+|The Western Design Center W65C02 is currently in production. WDC were the creators of the CPU core used in the R65C02, and the W65C02 is later version of this core. The same instruction set is used but the CPU it can be run at 14MHz, is fully static and can has tri-state address and data bus lines. A new WAI instruction stops the CPU clock and reduces power to a minimum, it will restart when an interrupt occurs
+
+|W65816
+|The Western design center W65816 is a 16-bit variant of the W65C02 with an 8-bit emulation mode as well as 24 bit segmented address bus. The W65C816 has a maximum clock speed of 14MHz
+
+|NEC V25 and V35
+|The NEC (now Renesas) V25 and V35 are CMOS variants of the Intel 8088 and 8086 respectively, with integrated UARTs, Timers, GPIO and DMA. The V25 has an 8-bit data bus and the V35 has a 16-bit bus both have a 20 bit address bus. which uses the same segmented strategy used by Intel
+
+|MC68HC000
+|The Motorola MC68HC000 highly successful and well regarded CPU, was used to power the Commodore Amiga and Atari ST computers. Its architecture and performance were a breakthrough, and this CPU is adopted to pay homage to such an innovation. 
+
+The MC68HC000 had a 32 bit addressing capability with 24 bit address bus width. It has a maximum clock speed of 10MHz, and has a dual mode CPU bus timing that supports older 6800 and 6500 8-bit peripherals, as well as an updated asynchronous native bus. 
+
+|Z16C00
+|The Z16C01 is a CMOS version of the Zilog Z8001 CPU, and is included as a curiosity and acknowledgment of the Commodore C900 Zilog Z8001 based "UNIX machine" prototype. The Z8001 was another 16-bit CPU that was developed at around the same time as the Intel 8086 and Motorola 68000. The Z8001 used a 24 bit segmented architecture, although only 23 bits where available on the address bus. The Z16C01 has a maximum clock frequency of 10MHz 
+
+|===
+
+==== R65C02 Implementation
+* Technical Specifications
+* Clock Generation
+* Reset and Interrupt Handling
+* Memory Interface
+
+==== W65816 Implementation
+* Technical Specifications
+* Operating Modes (8/16-bit)
+* Memory Management
+* Interrupt Vectors
+
+=== Dual Processor Systems
+==== Secondary Processor Options
+* V25/V35 Configuration
+* Z8K Integration
+* MC68K Implementation
+
+==== Processor Control
+* CPU Selection Logic
+* Mode Switching
+* Interrupt Handling
+* Shared Resources
+
+==== Inter-processor Communication
+* Mailbox System
+* Synchronization Methods
+* Shared Memory Access
+* Message Passing
+
+== Memory Architecture
+=== Address Space Organization
+* Memory Map Overview
+* Bank Layout
+* Reserved Regions
+* I/O Memory Mapping
+
+=== Memory Management
+==== Bank Switching
+* Control Registers
+* Bank Selection Logic
+* Page Mapping
+* Shadow RAM
+
+==== Memory Protection
+* Write Protection
+* Read Protection
+* System Reserved Areas
+* Configuration Registers
+
+=== Memory Types
+==== RAM Configuration
+* Static RAM
+* Dynamic RAM Support
+* Refresh Requirements
+* Wait States
+
+==== ROM/EPROM
+* Boot ROM
+* Character ROM
+* Flash Memory
+* Programming Interface
+
+=== Memory Timing
+==== Access Timing
+* Read Cycles
+* Write Cycles
+* Refresh Cycles
+* Bus Arbitration
+
+==== DMA Operations
+* DMA Controllers
+* Transfer Modes
+* Priority Levels
+* Channel Assignment
+
+== Implementation Details
+=== Hardware Interface
+==== Address Decoding
+* Logic Implementation
+* Chip Select Generation
+* Memory Type Detection
+* Error Handling
+
+==== Bus Control
+* Bus Arbitration
+* Wait State Generation
+* Clock Synchronization
+* Reset Logic
+
+=== Configuration
+==== System Setup
+* Jumper Settings
+* DIP Switch Configuration
+* Memory Size Selection
+* CPU Mode Selection
+
+==== Diagnostic Features
+* Memory Testing
+* CPU Verification
+* Error Reporting
+* Status Indicators

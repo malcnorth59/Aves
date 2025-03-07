@@ -1,0 +1,50 @@
+digraph vintage_computer {
+    // Graph settings
+    rankdir=LR;
+    node [shape=box, style=filled, fillcolor=lightgray];
+    
+    // Main CPU and Bus Controller
+    CPU [label="R65C02\nCPU\n4MHz", fillcolor=lightblue];
+    
+    // Memory components
+    LowerRAM [label="Lower RAM\n32K\n($0000-$7FFF)"];
+    UpperRAM [label="Upper RAM\n32K\n($8000-$FFFF)\nBanked"];
+    EPROM [label="EPROM\n64K\n($8000-$FFFF)\nBanked"];
+    
+    // I/O components
+    MC [label="Memory Control\nRegister\n($FE00)"];
+    VIA [label="W65C22\nVIA\n($FE20-$FE2F)"];
+    PS2 [label="PS/2\nKeyboard\n($FE40-$FE41)"];
+    CRTC [label="MC6845\nCRTC\n($FE80-$FE81)"];
+    
+    // Video components
+    DualPortRAM [label="Dual Port RAM\n2K\nVideo Buffer\nBanked"];
+    DisplayOut [label="Display\nOutput", shape=oval];
+    
+    // Data bus connections
+    edge [color=red, label="8-bit data bus"];
+    CPU -> {LowerRAM UpperRAM EPROM VIA PS2 CRTC MC};
+    CPU -> DualPortRAM [label="Left Port"];
+    DualPortRAM -> DisplayOut [label="8-bit data"];
+    
+    // Address bus
+    edge [color=blue, style=dashed, label="16-bit address bus"];
+    CPU -> {LowerRAM UpperRAM EPROM VIA PS2 CRTC MC DualPortRAM};
+    CRTC -> DualPortRAM [label="11-bit address"];
+    
+    // Video connections
+    edge [color=green];
+    CRTC -> DisplayOut [label="Sync"];
+    
+    // Control lines
+    edge [color=purple, style=dotted, label="control"];
+    CPU -> {VIA CRTC};
+    MC -> UpperRAM [label="Bank Select"];
+    MC -> EPROM [label="Bank Select"];
+    MC -> DualPortRAM [label="Bank Select"];
+
+    // Component positioning
+    {rank=same; LowerRAM UpperRAM EPROM}
+    {rank=same; MC VIA PS2 CRTC}
+    {rank=same; DualPortRAM DisplayOut}
+}
