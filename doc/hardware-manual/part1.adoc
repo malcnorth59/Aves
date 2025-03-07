@@ -105,7 +105,7 @@ The I/O expansion port is presented on a 34 pin right angle male header, it comp
 * [[[W65816,2]]] Western Design Center, "W65C816S 16-bit Microprocessor", Publication 655xx-16 Rev. 10.0
 * [[[W65c22,3]]] Western Design Center, "W65C22S Versatile Interface Adapter", Publication 652xx-14 Rev. 4.0
 * [[[necv25,4]]] NEC Electronics, "V25 16-bit Single Chip CMOS Microcomputer", Document ID: S11988EJ3V0UM00
-* [[[as6c1008,5]]] Alliance Memory, "AS6C1008 128K x 8 Low Power CMOS SRAM", Rev. 1.0
+* [[[as6c1008,5]]] Alliance Memory, "AS6C1008 128KB x 8 Low Power CMOS SRAM", Rev. 1.0
 * [[[eater,6]]] Ben Eater, "Building a 6502 computer", https://eater.net/6502
 
 [NOTE]
@@ -132,8 +132,38 @@ The CPU timing specifications can be found in:
 * Z16C01 - Reference [8]
 --
 
-== Aves 8-bit Models
+== Aves 8-bit Range
 The Aves 8-bit family consists of five primary models, each designed to serve different use cases while maintaining compatibility and adhering to the platform's core principles.
+
+== Aves Standard I/O
+The Aves platform uses a standardized I/O configuration across all models, built around the W65C22 VIA. This provides a consistent interface architecture, simplifying both hardware and software development while ensuring compatibility across the range.
+
+== Aves Standard I/O
+The Aves platform uses a standardized I/O configuration across all models, built around the W65C22 VIA. This provides a consistent interface architecture, simplifying both hardware and software development while ensuring compatibility across the range.
+
+.Aves Standard I/O
+[%header, cols="2,3"]
+|===
+|Interface|Specification
+
+|I2C
+|Software implementation using W6522 GPIO and Timers
+
+|SPI
+|Software implementation using W6522 GPIO and Timers
+
+|ASB
+|Implementation using 65C22 shift register
+
+|GPIO
+|Uses 2 x W6522 GPIO lines
+
+|Keyboard
+|PS/2 Keyboard Interface
+
+|Expansion
+|34-pin IO expansion port
+|===
 
 === Aves Sparrow
 The Sparrow represents the Commodore PET re-imagined. It's specification has been adapted to integrate with modern computer monitors and keyboards but offers 40 column by 25 row display, via and SVGA port.
@@ -158,10 +188,10 @@ The Dunnock represents the Commodore 8000 series re-imagined. It's specification
 .Dunnock Specifications
 * Processor: R65C02 @ 4MHz
 * Memory:
-** 128K RAM:
+** 128KB RAM consisting of:
 *** 32KB Lower RAM
 *** 96KB Upper RAM (Banked)
-** 128KB FLASH (Banked)
+** 128KB Flash (Banked)
 * 6845 CRTC display controller
 * I/O: W65C22 VIA, supporting:
 ** I2C, and SPI Interfaces (Software implementation)
@@ -188,12 +218,13 @@ The Robin represents the Commodore VIC-20 re-imagined. It's specification includ
 * Expansion: A 34-pin IO expansion port
 
 === Aves Blackbird
+The Blackbird represents a bridge between the 8-bit and 16-bit worlds, reimagining the Commodore 64's architecture with the W65C816S processor. While maintaining compatibility with 6502 code through its 8-bit emulation mode, it can switch to full 16-bit operation for enhanced performance. The VIC-II display controller provides C64-compatible graphics capabilities while operating at 9 times the original C-64 clock speed (8.86MHz vs 0.98MHz) enabling enhanced video operation when paired with the 16-bit CPU capabilities.
 
 .Blackbird Specifications
 * Processor: W65C816S @ 8.86MHz
 * Memory:
-** 128K RAM
-** 128K Flash 
+** 128KB RAM
+** 128KB Flash 
 * 6569 VIC II display controller
 * I/O: W65C22 VIA, supporting:
 ** I2C, and SPI Interfaces (Software implementation)
@@ -203,12 +234,14 @@ The Robin represents the Commodore VIC-20 re-imagined. It's specification includ
 * Expansion: A 34-pin IO expansion port
 
 === Aves Starling
+The Starling is a compact 8-bit computer built around the W65C02S processor running at 8.86MHz. It features a flexible memory architecture with 32KB of direct-access RAM complemented by 96KB of banked RAM and 128KB of banked Flash storage. The system uses the 8530 TED display controller for video output. I/O capabilities are provided through a W65C22 VIA, offering both industry-standard interfaces (I2C, SPI) and the custom Aves Serial Bus (ASB) implemented using the VIA's shift register. The system includes 6 GPIO lines for general-purpose interfacing, PS/2 keyboard input, and future expansion possibilities through its 34-pin I/O port.
+
 .Starling Specifications
 * Processor: W65C02S @ 8.86MHz
 * Memory:
-** 32K Lower RAM
-** 96K Upper RAM (Banked)
-** 128K Flash (Banked)
+** 32KB Lower RAM
+** 96KB Upper RAM (Banked)
+** 128KB Flash (Banked)
 * 8530 TED display controller
 * I/O: W65C22 VIA, supporting:
 ** I2C, and SPI Interfaces (Software implementation)
@@ -224,14 +257,14 @@ The Fieldfare represents the ultimate expression of the Aves 8-bit family, drawi
 * Main Processor: W65C816S @ 10MHz
 ** 16-bit processing mode
 ** 24-bit address bus
-** Direct memory access - no MMU
+** Direct memory addressing - no MMU
 ** Primary system control
-** 512KB Main RAM - segmented in 64K blocks
-** 128KB Flash ROM - segmented in 64K blocks
+** 512KB Main RAM - segmented in 64KB blocks
+** 128KB Flash ROM - segmented in 64KB blocks
 
 * I/O Subsystem:
 ** Processor: R65C02 @ 4MHz
-** 2KB Dual-Port RAM fixed in address space
+** 2KB Dual-Port RAM
 ** 32KB RAM
 ** 8KB EPROM
 ** Direct address connection to peripherals
@@ -250,6 +283,12 @@ The Fieldfare represents the ultimate expression of the Aves 8-bit family, drawi
 ** Hardware sprite management
 ** Multiple display modes
 
+* Main Graphic display
+** MC6845 CRTC Display controller 
+** 800 x 600 Mono Bitmap display
+** 400 x 300 Colour Bitmap Display
+** 32KB x 16 bit display RAM
+
 * Inter-Processor Communication:
 ** Main-I/O: 2KB Dual-Port RAM
 ** Main-Video: 2KB Dual-Port RAM
@@ -260,17 +299,11 @@ The Fieldfare represents the ultimate expression of the Aves 8-bit family, drawi
 ** Address lines A0-A15 fully decoded
 ** A16-A23 partially decoded for segment selection
 ** Direct address line connection
-** Upper address lines select 64K segments
+** Upper address lines select 64KB segments
 ** I/O devices mapped directly to address space
-** Fixed 64K segments defined by hardware
+** Fixed 64KB segments defined by hardware
 ** No dynamic banking or memory management
 ** No MMU - direct memory access throughout
-
-* Display Modes:
-** VIC-II graphics modes
-** 40/80 column modes
-** Programmable character sets
-** Hardware sprite support
 
 * Expansion:
 ** Primary 34-pin IO expansion port
@@ -281,7 +314,7 @@ The Fieldfare represents the ultimate expression of the Aves 8-bit family, drawi
 * Compatibility:
 ** Native 16-bit mode
 ** 8-bit compatibility mode
-** Support for both 6502 and 65816 code execution
+** Support for both 6502, 65C02 and 65816 code execution
 
 == Aves Peripherals
 
