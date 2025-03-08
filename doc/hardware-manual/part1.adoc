@@ -147,7 +147,7 @@ The Aves 8-bit family consists of five primary models, each designed to serve di
 === Aves Standard I/O
 The Aves platform uses a standardized I/O configuration across all models, built around the W65C22 VIA. This provides a consistent interface architecture, simplifying both hardware and software development while ensuring compatibility across the range.
 
-.Standard I/O Specification
+.Standard I/O Specifications
 [%header, cols="2,3"]
 |===
 |Interface|Specification
@@ -170,6 +170,9 @@ The Aves platform uses a standardized I/O configuration across all models, built
 |Expansion
 |34-pin IO expansion port
 |===
+
+.Standard I/O Architecture
+image::standard-io.png[Aves Standard I/O]
 
 === Aves Sparrow
 The Sparrow represents the Commodore PET re-imagined. It's specification has been adapted to integrate with modern computer monitors and keyboards but offers 40 column by 25 row display, via and SVGA port.
@@ -202,6 +205,9 @@ The Sparrow represents the Commodore PET re-imagined. It's specification has bee
 
 |===
 
+.Sparrow Architecture
+image::sparrow.png[Aves Sparrow]
+
 === Aves Dunnock
 The Dunnock represents the Commodore 8000 series re-imagined. It's specification has been adapted to integrate with modern computer monitors and keyboards but offers 80 column by 25 row display, via an SVGA port.
 
@@ -233,6 +239,9 @@ The Dunnock represents the Commodore 8000 series re-imagined. It's specification
 
 |===
 
+.Dunnock Architecture
+image::sparrow.png[Aves Dunnock]
+
 === Aves Robin
 The Robin represents the Commodore VIC-20 re-imagined. It's specification includes an original 6561 VIC chip with the Aves standard memory and IO configuration. The display area is increased to 28 columns by 30 rows
 
@@ -263,6 +272,9 @@ The Robin represents the Commodore VIC-20 re-imagined. It's specification includ
 |<<Standard I/O Specification>>
 
 |===
+
+.Robin Architecture
+image::robin.png[Aves Robin]
 
 === Aves Blackbird
 The Blackbird represents a bridge between the 8-bit and 16-bit worlds, reimagining the Commodore 64's architecture with the W65C816S processor. While maintaining compatibility with 6502 code through its 8-bit emulation mode, it can switch to full 16-bit operation for enhanced performance. The VIC-II display controller provides C64-compatible graphics capabilities while operating at 9 times the original C-64 clock speed (8.86MHz vs 0.98MHz) enabling enhanced video operation when paired with the 16-bit CPU capabilities.
