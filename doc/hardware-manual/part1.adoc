@@ -61,43 +61,43 @@ The I/O expansion port is presented on a 34 pin right angle male header, it comp
 |1,2
 |Ground
 
-|3-10
-|8 bit, Address Bus, A0-A7
-
-|11
-|RnW signal 1=read, 0=write
+|3-11
+|9 bit, Address Bus, A0-A8
 
 |12
+|RnW signal 1=read, 0=write
+
+|13
 |Phi2 clock, represents phase 2 of the system clock, which is used to synchronise all CPU operations
 
-|13-20
+|14-21
 |8 bit Data bus D0-D7
 
-|21
+|22
 |RnW
 
-|22
+|23
 |Phi2
 
-|23
+|24
 |XIOb, Expansion Port Select, Active low
 
-|24
+|25
 |IRQb, Interrupt request, active low
 
-|25
+|26
 |NMIb, Interrupt request, active low
 
-|26
+|27
 |RESb, Reset signal, active low
 
-|27
+|28
 |SDA, I2C Bi directional data line
 
-|28
+|29
 |SCL, I2C Bi directional Clock line
 
-|29,30
+|30
 |NC
 
 |31,32
@@ -280,17 +280,56 @@ image::robin.png[Aves Robin]
 The Blackbird represents a bridge between the 8-bit and 16-bit worlds, reimagining the Commodore 64's architecture with the W65C816S processor. While maintaining compatibility with 6502 code through its 8-bit emulation mode, it can switch to full 16-bit operation for enhanced performance. The VIC-II display controller provides C64-compatible graphics capabilities while operating at 9 times the original C-64 clock speed (8.86MHz vs 0.98MHz) enabling enhanced video operation when paired with the 16-bit CPU capabilities.
 
 .Blackbird Specifications
-* Processor: W65C816S @ 8.86MHz
-* Memory:
-** 128KB RAM
-** 128KB Flash 
-* 6569 VIC II display controller
-* I/O: W65C22 VIA, supporting:
-** I2C, and SPI Interfaces (Software implementation)
-** ASB (Aves Serial Bus, using 65C22 shift register) 
-** 6 x GPIO lines
-* PS/2 Keyboard
-* Expansion: A 34-pin IO expansion port
+[%header, cols="2,3"]
+|===
+|Attribute|Detail
+
+|CPU
+|W65C816 @ 8.86MHz
+
+|RAM
+|128KB RAM
+
+|ROM
+|128KB Flash
+
+|Display Controller
+|6569 VIC II
+
+|Display Buffer
+|Uses address $08000-0C000 of RAM 
+
+|I/O Ports
+|<<Standard I/O Specification>>
+
+|===
+
+.Blackbird Specifications
+[%header, cols="2,3"]
+|===
+|Attribute|Detail
+
+|CPU
+|W65C816 @ 8.86MHz
+
+|RAM
+|128KB RAM
+
+|ROM
+|128KB Flash
+
+|Display Controller
+|6569 VIC II
+
+|Display Buffer
+|Uses address $08000-0C000 of RAM 
+|I/O Ports
+|<<Standard I/O Specification>>
+
+|===
+
+.Blackbird Architecture
+image::blackbird.png[Aves Robin]
 
 === Aves Starling
 The Starling is a compact 8-bit computer built around the W65C02S processor running at 8.86MHz. It features a flexible memory architecture with 32KB of direct-access RAM complemented by 96KB of banked RAM and 128KB of banked Flash storage. The system uses the 8530 TED display controller for video output. I/O capabilities are provided through a W65C22 VIA, offering both industry-standard interfaces (I2C, SPI) and the custom Aves Serial Bus (ASB) implemented using the VIA's shift register. The system includes 6 GPIO lines for general-purpose interfacing, PS/2 keyboard input, and future expansion possibilities through its 34-pin I/O port.
