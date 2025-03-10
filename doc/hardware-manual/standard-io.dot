@@ -1,0 +1,26 @@
+digraph aves_io {
+    rankdir=LR;
+    node [shape=box, style=rounded];
+    
+    w6522 [label="W65C22 VIA", style=filled, fillcolor=lightblue];
+    
+    subgraph cluster_interfaces {
+        label="Software Implementations";
+        style=dashed;
+        i2c [label="I2C Interface"];
+        spi [label="SPI Interface"];
+    }
+    
+    asb [label="ASB\n(Aves Serial Bus)"];
+    gpio [label="GPIO Lines"];
+    ps2 [label="PS/2 Keyboard\nInterface"];
+    exp [label="34-pin\nExpansion Port"];
+    
+    w6522 -> i2c [label="PA0 (SCL)\nPA7 (SDA)"];
+    w6522 -> spi [label="PB0 (SCK)\nPB1-3 (Device Select)\nPB6 (MOSI)\nPB7 (MISO)"];
+    w6522 -> asb [label="Shift Register\nCA1/CA2"];
+    w6522 -> gpio [label="GPIO Lines"];
+    w6522 -> ps2;
+    w6522 -> exp;
+}
+// dot -Tpng -Gdpi=300 -o standard-io.png standard-io.dot

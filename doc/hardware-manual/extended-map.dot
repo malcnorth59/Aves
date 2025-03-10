@@ -1,0 +1,20 @@
+digraph memory_map {
+    rankdir=TB;
+    node [shape=record, fontname="monospace"];
+    
+    subgraph cluster_segment0 {
+        label="Segment 0 (A20=0)\n(16 shadows $000000-$0FFFFF)";
+        style=dashed;
+        
+        seg0 [label="{$FFFF-$FF00\nROM Window|$FEFF-$FE00\nStandard I/O (256B)|$FDFF-$FC00\nExpanded I/O (512B)|$FBFF-$9000\nROM Window|$8FFF-$8000\nDPM (4K)|$7FFF-$0000\nRAM Window (32K)}"];
+    }
+    
+    subgraph cluster_extended {
+        label="Extended Memory (A20=1)\n($100000-$1FFFFF)";
+        style=dashed;
+        
+        ext_mem [label="{$1FFFFF-$180000|512KB Flash|\n|\n|\n|\n|\n|$17FFFF-$100000|512KB RAM}"];
+    }
+    
+    {rank=same; seg0 ext_mem}
+}

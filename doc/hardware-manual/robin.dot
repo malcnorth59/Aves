@@ -1,0 +1,35 @@
+digraph aves_robin {
+    rankdir=LR;
+    node [shape=box, style=rounded];
+    
+    cpu [label="W65C02S\n4.43MHz", style=filled, fillcolor=lightblue];
+    
+    subgraph cluster_memory {
+        label="Memory";
+        style=dashed;
+        ram_lower [label="32KB\nLower RAM"];
+        ram_upper [label="32KB\nUpper RAM\n(Banked)"];
+        rom [label="32KB\nEPROM\n(Banked)"];
+    }
+    
+    vic [label="6561 VIC"];
+    display [label="Display Output"];
+    
+    io [label="W65C22 VIA\nStandard I/O"];
+    
+    cpu -> ram_lower;
+    cpu -> ram_upper;
+    cpu -> rom;
+    cpu -> vic;
+    cpu -> io;
+    
+    ram_upper -> vic [label="Display Buffer"];
+    vic -> display [label="28x30\nDisplay"];
+    
+    io -> {keyboard, expansion} [style=dashed];
+    
+    keyboard [label="PS/2\nKeyboard"];
+    expansion [label="34-pin\nExpansion Port"];
+}
+
+//dot -Tpng -Gdpi=300 -o robin.png robin.dot

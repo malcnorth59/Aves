@@ -1,0 +1,32 @@
+digraph aves_blackbird {
+    rankdir=LR;
+    node [shape=box, style=rounded];
+    
+    cpu [label="W65C816\n8.86MHz", style=filled, fillcolor=lightblue];
+    
+    subgraph cluster_memory {
+        label="Memory";
+        style=dashed;
+        ram [label="128KB\nRAM"];
+        rom [label="128KB\nFlash"];
+    }
+    
+    vic [label="6569 VIC-II"];
+    display [label="Display Output"];
+    
+    io [label="W65C22 VIA\nStandard I/O"];
+    
+    cpu -> ram;
+    cpu -> rom;
+    cpu -> vic;
+    cpu -> io;
+    
+    ram -> vic [label="Display Buffer\n$08000-0C000"];
+    vic -> display;
+    
+    io -> {keyboard, expansion} [style=dashed];
+    
+    keyboard [label="PS/2\nKeyboard"];
+    expansion [label="34-pin\nExpansion Port"];
+}
+//dot -Tpng -Gdpi=300 -o blackbird.png blackbird.dot
