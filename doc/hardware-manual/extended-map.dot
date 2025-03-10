@@ -13,7 +13,7 @@ digraph memory_map {
         label="Extended Memory (A20=1)\n($100000-$1FFFFF)";
         style=dashed;
         
-        ext_mem [label="{$1FFFFF-$180000|512KB Flash|\n|\n|\n|\n|\n|$17FFFF-$100000|512KB RAM}"];
+        ext_mem [label="{$1FFFFF-$180000\n512KB Flash|$17FFFF-$100000\n512KB RAM}"];
     }
     
     {rank=same; seg0 ext_mem}
