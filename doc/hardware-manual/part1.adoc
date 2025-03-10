@@ -28,8 +28,6 @@ Throughout the system, one finds this pattern of respectful modernisation. The h
 
 This architectural philosophy extends to the physical design as well. The circuit board layouts, component selection, and signal routing all reflect a balance between simplicity and capability. Modern manufacturing techniques and components are employed where beneficial, yet the system remains accessible to hobbyist construction and modification, maintaining the spirit of its predecessors.
 
-
-
 ==== I2C Interface
 The I2C interface is implemented in software using PA0 of the VIA for SCL and PA7 for SDA. This arrangement provides optimal bit manipulation capabilities, as testing bit 7 with the BIT instruction will directly affect the processor's N flag for efficient state testing. Both lines require external 4.7kΩ pull-up resistors to VCC to ensure proper signal levels and to meet I2C bus specifications.
 
