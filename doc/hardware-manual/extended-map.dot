@@ -3,6 +3,7 @@ digraph memory_map {
     node [shape=record, fontname="monospace"];
     
     subgraph cluster_segment0 {
+        labelloc="t";    // Place label at top
         label="Segment 0 (A20=0)\n(16 shadows $000000-$0FFFFF)";
         style=dashed;
         
@@ -10,6 +11,7 @@ digraph memory_map {
     }
     
     subgraph cluster_extended {
+        labelloc="t";    // Place label at top
         label="Extended Memory (A20=1)\n($100000-$1FFFFF)";
         style=dashed;
         
