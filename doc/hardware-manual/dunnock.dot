@@ -32,4 +32,4 @@ digraph aves_dunnock {
     keyboard [label="PS/2\nKeyboard"];
     expansion [label="34-pin\nExpansion Port"];
 }
-dot -Tpng -Gdpi=300 -o dunnock.png dunnock.dot
+//dot -Tpng -Gdpi=300 -o dunnock.png dunnock.dot
