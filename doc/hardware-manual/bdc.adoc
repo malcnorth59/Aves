@@ -1,0 +1,162 @@
+= Bitmap Display Controller (BDC)
+
+== Overview
+The Aves bitmap display controller generates an 800 x 512 monochrome display on an SVGA compatible monitor.
+
+== Initial Prototype Features
+* Standard: VESA SVGA
+* Resolution: 800 x 512
+* Pixel clock 20MHz (Pixel data rate => 20MHz)
+** 1 x 74AC163 Sync Counter
+** 2.5MHz 'Character Clock'
+** 10MHz Phi2 for CPU main clock
+* MC6845 CRTC
+* Display Buffer: 2 x 32KB SRAM
+** 2 X 74HC245 octal bus transceiver
+* 15 Bit video address (VA0-VA14)
+** VA0-VA6  => CRTC MA0-MA6
+** VA7      => CRTC RA0
+** VA8-VA14 => CRTC MA7-MA13
+** 2 x 74HC541 octal tristate buffer
+* Horizontal scrolling register
+** 1 x 74HC273 8 bit latch
+** 2 x 74HC283 4 bit adder
+* Display Timing and Control
+** 1 x ATF22V10-10
+** 1 x 74AC74
+** 1 x 74AC02
+** 2 x 74HC166
+** 1 x 74AC157
+
+.RGB Outputs
+[source]
+----
+  +--[R]--+--[R]--+----+--[75]-- R,G,B
+  |       |       |    |
+ [2R]    [2R]    [2R] [150]
+  |       |       |    |
+ R0,     R1,     R2,  GND
+ G0,     G1,     G2,
+ B0      B1       
+----
+[NOTE]
+--
+VGA Signal Requirements: +
+0.7V peak-to-peak +
+75Ω termination impedance
+
+Current required for 0.7V into 75Ω: +
+I = 0.7V/75Ω = 9.33mA
+
+For 5V TTL/CMOS input: +
+Total resistance = 5V/9.33mA = 536Ω
+
+1% E96 Series Values: +
+R  = 270Ω +
+2R = 549Ω
+
+Actual output: +
+V = 9.29mA * 75Ω = 0.697V 
+--
+
+== CPLD Implementation
+
+=== Primary CPLD (ATF1508)
+==== Core Functionality (20MHz)
+* Address generation (17-bit)
+* Memory interface (256KB/128KW)
+* Horizontal/Vertical scroll
+* Bank switching
+* Hardwired timing generation (replacing MC6845)
+
+==== Memory Organization
+* 256KB frame buffer
+* Accessible as 128K words
+* Supports both display modes
+* Real-time mode switching
+* Multiple screen buffers
+
+=== Secondary CPLD
+==== Core Functionality
+* Mode switching control
+* Palette RAM interface
+* Shift register implementation
+* RGB output generation
+
+==== Display Modes
+===== Monochrome Mode (800x512)
+* 1 bit per pixel
+* Uses lower two palette registers (PR0b, PR1b)
+* 128 bytes per line
+* Full screen requires 64KB
+
+===== Color Mode (400x300)
+* 2 bits per pixel
+* 4 colors per pixel
+* 16 palette registers
+** 8-bit RGB values per register (3:3:2 format)
+* 128 bytes per line
+* Full screen requires 37.5KB
+
+==== Features
+* Real-time mode switching
+* Independent palette updates
+* Scanline boundary switching
+* Special effects capability
+* 20MHz input clock
+
+== Common Features
+* Identical memory interface
+* Compatible timing generation
+* Shared scroll logic
+* Bank switching support
+* Flexible display options
+
+== BDC Clock Timing
+
+.BDC Timing
+[source]
+----
+01010101010101010101010101010101 => PXCK:   Pixel clock (20MHz)
+00110011001100110011001100110011 => Phi2:   CPU master clock (10MHz)
+00001111000011110000111100001111 => CLK/4:  Clock / 4 (5MHz)
+00000000111111110000000011111111 => CLK/8:  Clock / 8 (2.5MHz)
+00000000000000001111111111111111 => CLK/16: Clock / 16 (1.25MHz)
+00111111111111111111111111111111 => SRLDb: Shift register Load
+----
+
+.BDC Timing Diagram
+[source]
+----
+PXCK   _⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽⎺⎽_ 20MHz
+
+Phi2   ⎺⎺⎽⎽⎺⎺⎽⎽⎺⎺⎽⎽⎺⎺⎽⎽⎺⎺⎽⎽⎺⎺⎽⎽⎺⎺⎽⎽⎺⎺⎽⎽ 10MHz
+
+CLK/4  ⎺⎺⎺⎺⎽⎽⎽⎽⎺⎺⎺⎺⎽⎽⎽⎽⎺⎺⎺⎺⎽⎽⎽⎽⎺⎺⎺⎺⎽⎽⎽⎽ 5MHz
+
+CLK/8  ⎺⎺⎺⎺⎺⎺⎺⎺⎽⎽⎽⎽⎽⎽⎽⎽⎺⎺⎺⎺⎺⎺⎺⎺⎽⎽⎽⎽⎽⎽⎽⎽ 2.5MHz
+
+CLK/16 ⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎽⎽⎽⎽⎽⎽⎽⎽⎽⎽⎽⎽⎽⎽⎽⎽ 1.25MHz
+
+SRLDb  ⎽⎽⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺ Active Low
+
+----
+
+
+== Palette Decode
+
+.BDC Palette Decode
+[%header, cols="1,1,1,1,1,1,1,1,1"]
+|===
+|Mono|PXC|PX1|PX0|=>|PR0b|PR1b|PR2b|PR3b
+
+|0|X|0|0|=>|0|1|1|1
+|0|X|0|1|=>|1|0|1|1
+|0|X|1|0|=>|1|1|0|1
+|0|X|1|1|=>|1|1|1|0
+|1|0|X|0|=>|1|0|1|1
+|1|0|X|1|=>|0|1|1|1
+|1|1|0|X|=>|1|0|1|1
+|1|1|1|X|=>|0|1|1|1
+|===
+
