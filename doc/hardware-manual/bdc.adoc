@@ -28,6 +28,8 @@ The Aves bitmap display controller generates an 800 x 512 monochrome display on 
 ** 2 x 74HC166
 ** 1 x 74AC157
 
+[%unbreakable]
+--
 .RGB Outputs
 [source]
 ----
@@ -39,6 +41,7 @@ The Aves bitmap display controller generates an 800 x 512 monochrome display on 
  G0,     G1,     G2,
  B0      B1       
 ----
+--
 [NOTE]
 --
 VGA Signal Requirements: +
