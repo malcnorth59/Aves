@@ -218,13 +218,13 @@ The Dunnock represents the Commodore 8000 series re-imagined. It's specification
 |R65C02 @ 4MHz
 
 |Lower RAM
-|32KB Static (Part of 128KB RAM)
+|32KB Static
 
 |Upper RAM
-|96KB Static (Banked, Part of 128KB RAM)
+|32KB Static (Banked)
 
 |ROM
-|128KB Flash (Banked)
+|32KB Flash (Banked)
 
 |Display Buffer
 |4KB Dual Port RAM
@@ -238,7 +238,7 @@ The Dunnock represents the Commodore 8000 series re-imagined. It's specification
 |===
 
 .Dunnock Architecture
-image::sparrow.png[Aves Dunnock]
+image::dunnock.png[Aves Dunnock]
 
 === Aves Robin
 The Robin represents the Commodore VIC-20 re-imagined. It's specification includes an original 6561 VIC chip with the Aves standard memory and IO configuration. The display area is increased to 28 columns by 30 rows
@@ -283,32 +283,7 @@ The Blackbird represents a bridge between the 8-bit and 16-bit worlds, reimagini
 |Attribute|Detail
 
 |CPU
-|W65C816 @ 8.86MHz
-
-|RAM
-|128KB RAM
-
-|ROM
-|128KB Flash
-
-|Display Controller
-|6569 VIC II
-
-|Display Buffer
-|Uses address $08000-0C000 of RAM 
-
-|I/O Ports
-|<<Standard I/O Specification>>
-
-|===
-
-.Blackbird Specifications
-[%header, cols="2,3"]
-|===
-|Attribute|Detail
-
-|CPU
-|W65C816 @ 8.86MHz
+|W65C816 @ 7.88MHz
 
 |RAM
 |128KB RAM
@@ -333,44 +308,65 @@ image::blackbird.png[Aves Robin]
 The Starling is a compact 8-bit computer built around the W65C02S processor running at 8.86MHz. It features a flexible memory architecture with 32KB of direct-access RAM complemented by 96KB of banked RAM and 128KB of banked Flash storage. The system uses the 8530 TED display controller for video output. I/O capabilities are provided through a W65C22 VIA, offering both industry-standard interfaces (I2C, SPI) and the custom Aves Serial Bus (ASB) implemented using the VIA's shift register. The system includes 6 GPIO lines for general-purpose interfacing, PS/2 keyboard input, and future expansion possibilities through its 34-pin I/O port.
 
 .Starling Specifications
-* Processor: W65C02S @ 8.86MHz
+* Processor: W65C02S @ 4.43MHz
 * Memory:
 ** 32KB Lower RAM
-** 96KB Upper RAM (Banked)
-** 128KB Flash (Banked)
+** 32KB Upper RAM (Banked)
+** 64KB EPROM (Banked)
 * 8530 TED display controller
-* I/O: W65C22 VIA, supporting:
-** I2C, and SPI Interfaces (Software implementation)
-** ASB (Aves Serial Bus, using 65C22 shift register) 
-** 6 x GPIO lines
-* PS/2 Keyboard
-* Expansion: A 34-pin IO expansion port
+|I/O Ports
+|<<Standard I/O Specification>>
 
 === Aves Fieldfare
 The Fieldfare represents the ultimate expression of the Aves 8-bit family, drawing inspiration from both the Commodore 128 and the unreleased P-500. It features a sophisticated multi-processor architecture with three loosely coupled subsystems.
 
 .Fieldfare Specifications
-* Main Processor: W65C816S @ 10MHz
-** 16-bit processing mode
-** 24-bit address bus
-** Direct memory addressing - no MMU
-** Primary system control
-** 512KB Main RAM - segmented in 64KB blocks
-** 128KB Flash ROM - segmented in 64KB blocks
+|===
+|Attribute|Detail
 
-* I/O Subsystem:
-** Processor: R65C02 @ 4MHz
-** 2KB Dual-Port RAM
-** 32KB RAM
-** 8KB EPROM
-** Direct address connection to peripherals
-** Handles all peripheral operations autonomously
-** Real-time I/O processing
-** Manages peripheral timing requirements
+|Main CPU
+|W65C816S @ 10MHz
+
+|Lower RAM
+|512KB 
+
+|Upper RAM
+|512KB 
+
+|Shadow RAM
+|128KB
+
+|ROM
+|128KKB Flash
+
+|===
+
+.IO Coprocessor Specifications
+|===
+|Attribute|Detail
+
+|CPU
+|R65C02 @ 4MHz
+
+|RAM
+|32KB 
+
+|ROM
+|8KB ROM
+
+|Inter CPU - Dual port RAM
+|2KB
+
+|Dunnock Display Interface
+|<<Dunnock Specifications>>
+
+|I/O Ports
+|<<Standard I/O Specification>>
+|===
 
 * Video Subsystem:
-** Processor: W65C02S @ 8.86MHz
-** 32KB dedicated Video RAM
+** 
+** 32KB dedicated Lower RAM
 ** 8KB EPROM
 ** 2KB Dual-Port RAM fixed in address space
 ** 6569 VIC-II display controller
@@ -392,13 +388,20 @@ The Fieldfare represents the ultimate expression of the Aves 8-bit family, drawi
 ** Fixed memory mapping for communication areas
 
 * Memory Architecture:
-** Address lines A0-A15 fully decoded
-** A16-A23 partially decoded for segment selection
-** Direct address line connection
-** Upper address lines select 64KB segments
-** I/O devices mapped directly to address space
-** Fixed 64KB segments defined by hardware
-** No dynamic banking or memory management
+** 24-bit address bus supporting 16MB address space (Only 2MB Used)
+** Block 0 (000000-07FFFF):
+*** 8 repetitions of base segment
+*** Each 64KB segment contains:
+**** 8K RAM
+**** Aves Standard I/O
+**** 8K ROM
+** Block 1 (080000-0FFFFF):
+*** 512K RAM
+** Block 2 (100000-17FFFF):
+*** 512K RAM
+** Block 3 (180000-1FFFFF):
+*** 4 repetitions of 128K segment
+*** Each segment contains 128K Flash with Shadow RAM
 ** No MMU - direct memory access throughout
 
 * Expansion:
